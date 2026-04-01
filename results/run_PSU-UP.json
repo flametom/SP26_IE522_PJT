@@ -1,0 +1,16 @@
+{
+  "P_max": 2000,
+  "n_impacted": 343,
+  "n_survival": 321,
+  "n_casualty": 10,
+  "n_arrival": 1657,
+  "n_active": 12,
+  "RI": 0.1715,
+  "RS": 0.9358600583090378,
+  "RC": 0.029154518950437316,
+  "RL": 0.03498542274052478,
+  "community": "PSU-UP",
+  "H_max": 5,
+  "panic_rate": 0.1,
+  "elapsed_sec": 19.5
+}

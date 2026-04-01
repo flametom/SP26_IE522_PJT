@@ -1,0 +1,27 @@
+The final project reporting, formatting and grading policies are described as follows:
+(1)    Codes for the simulation model (10 points) 
+•    Submit the codes for your developed simulation model and pertinent analysis results
+•    Include the readme about run environment to run and check the correctness of simulation model
+•    Submit via a zipped package via CANVAS 
+
+
+(2)    Final project report (20 points)
+•    Submit the report (presentation slides) via CANVAS (5 points)
+•    Delineate each member's contribution in the report (5 points)
+An example of Team members’ contribution is as follows:
+Member1 contributed to the development of model component ##, and drafted the report. Member2 contributed to the data collection, literature review, and the data analysis. Member3 contributed to the design of the study and revised the report. All members read and approved the final report.
+•    Quality of presentation (10 points)
+
+
+(3)    Team self-evaluation (5 points)
+•    An individual’s project grade = (team grade) + (adjustment factor)
+•    Team grade is measured from modeling performance and final project report
+•    Adjustment factor is evaluated from the team member evaluation form.
+•    Submit your final team member evaluation form via CANVAS. 
+
+ 
+
+Please submit all materials electronically through the canvas.
+Please DO NOT submit through emails or hardcopies.
+Email and hardcopy submission will NOT be accepted and graded.
+Please submit before the DUE date and time. Late submission will not be accepted.
