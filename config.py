@@ -19,11 +19,17 @@ N_STEPS = int(SIM_DURATION / DT)
 # Paper: "Leveraging geographical data from open sources like OpenStreetMap"
 # 2021 paper: "place name can be an area within certain distances of
 #   an address, a university, and a city."
-# Universities: place polygon + 25m buffer (matches OSMnx internal buffer).
-# Cities: center point + dist (matching paper Table V building counts).
+# Per-community overrides: simplify, network_type, retain_all.
+# Defaults (if omitted): simplify=True, network_type="walk", retain_all=True.
 COMMUNITIES = {
+    # Uniform config: simplify=True, retain_all=True, network_type="walk"
+    # for methodological consistency across all communities.
+    # 2021 paper (Zhang & Yang): "breakpoints are not considered" → simplify=True
+    # retain_all=True preserves disconnected sub-networks (bridged in network_model).
+    # Per-community edge count discrepancies are documented in reproduction_report.
     "PSU-UP": {"place": "Pennsylvania State University, University Park, PA, USA"},
-    "UVA-C":  {"center": (38.0336, -78.5080), "dist": 500},
+    "UVA-C":  {"place": "University of Virginia, Charlottesville, VA, USA",
+               "building_center": (38.0336, -78.5080), "building_dist": 500},
     "VT-B":   {"place": "Virginia Tech, Blacksburg, VA, USA"},
     "RA-PA":  {"center": (40.3357, -75.9269), "dist": 1170},
     "KOP-PA": {"center": (40.0876, -75.3890), "dist": 860},

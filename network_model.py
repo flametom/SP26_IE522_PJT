@@ -6,9 +6,9 @@ V = building nodes ∪ non-building nodes (intersections / open grounds)
 E = pedestrian pathways with length and capacity attributes.
 
 Network construction matches the paper's Table V by using:
-  - graph_from_place(..., simplify=True, retain_all=True)
-  - TAG mode: nearest walk node is tagged as building (not a separate centroid)
-  - building=* UNION building:part=* for maximum building coverage
+  - Uniform config: simplify=True, retain_all=True, network_type="walk"
+  - ADD mode: building centroids as separate nodes + connector edges
+  - Walk-edge count tracked separately for Table V comparison
   - Disconnected components bridged to main component
 
 See network_diagnostics.py for the reverse-engineering analysis.
@@ -37,7 +37,7 @@ def build_network(community_key: str, use_cache: bool = True):
     G : networkx.MultiDiGraph
         Walking network with building-tagged nodes, capacities, and shelter flags.
     building_nodes : list[int]
-        Node IDs that represent buildings (tagged walk network nodes).
+        Node IDs for building centroid nodes (ADD mode).
     shelter_nodes : list[int]
         Subset of building_nodes designated as shelters.
     """
@@ -52,16 +52,29 @@ def build_network(community_key: str, use_cache: bool = True):
     comm = COMMUNITIES[community_key]
 
     # ── Walk network ───────────────────────────────────────────────────
-    # 2021 paper: "breakpoints are not considered" → simplify=True.
-    # retain_all=True keeps disconnected sub-networks (matches paper topology).
-    print(f"[Network] Downloading walking network for {community_key} ...")
+    # Always fetch raw (simplify=False, retain_all=True) then post-process.
+    # This matches the diagnostics pipeline and avoids graph_from_place's
+    # aggressive polygon-clipping when retain_all=False.
+    do_simplify = comm.get("simplify", True)
+    net_type = comm.get("network_type", "walk")
+    do_retain  = comm.get("retain_all", True)
+    print(f"[Network] Downloading {net_type} network for {community_key} "
+          f"(simplify={do_simplify}, retain_all={do_retain}) ...")
     if "place" in comm:
-        G = ox.graph_from_place(comm["place"], network_type="walk",
-                                 simplify=True, retain_all=True)
+        poly = ox.geocode_to_gdf(comm["place"]).geometry.iloc[0]
+        buffered = poly.buffer(25 / 111000)  # ~25m buffer
+        G = ox.graph_from_polygon(buffered, network_type=net_type,
+                                   simplify=False, retain_all=True,
+                                   truncate_by_edge=True)
     else:
         G = ox.graph_from_point(comm["center"], dist=comm["dist"],
-                                 network_type="walk", simplify=True,
-                                 retain_all=True)
+                                 network_type=net_type, simplify=False,
+                                 retain_all=True, truncate_by_edge=True)
+    # Post-process: simplify then retain_all (matches diagnostics)
+    if do_simplify:
+        G = ox.simplify_graph(G)
+    if not do_retain:
+        G = ox.truncate.largest_component(G)
     G = ox.project_graph(G)  # project to UTM (meters)
 
     # ── Tag all nodes with defaults ────────────────────────────────────
@@ -101,15 +114,15 @@ def build_network(community_key: str, use_cache: bool = True):
         print(f"[Network] Bridged {len(components)-1} disconnected components")
 
     # ── Fetch building footprints ──────────────────────────────────────
-    # Use the same buffered polygon that OSMnx uses internally for
-    # graph_from_place (~25m buffer). This matches the paper's building
-    # counts (e.g., PSU-UP 953) which are higher than features_from_place
-    # because graph_from_place expands the polygon before downloading.
+    # Optional separate building query (building_center + building_dist)
+    # allows the walk network and building area to differ.
     print(f"[Network] Downloading building footprints ...")
     try:
-        if "place" in comm:
-            poly = ox.geocode_to_gdf(comm["place"]).geometry.iloc[0]
-            buffered = poly.buffer(25 / 111000)  # ~25m buffer
+        if "building_center" in comm:
+            buildings = ox.features_from_point(
+                comm["building_center"], tags={"building": True},
+                dist=comm["building_dist"])
+        elif "place" in comm:
             buildings = ox.features_from_polygon(buffered, tags={"building": True})
         else:
             buildings = ox.features_from_point(comm["center"],
@@ -121,11 +134,23 @@ def build_network(community_key: str, use_cache: bool = True):
         print("[Network] Warning: building data unavailable, using node subset.")
         centroids = None
 
-    # ── ADD mode: building centroids as new nodes ──────────────────────
-    # Each building centroid becomes a separate node connected to the
-    # nearest walk-network node via bidirectional edges.  This places
-    # agents at actual building locations, yielding realistic spatial
-    # distribution and RI values that match the paper.
+    # ── Building integration: ADD mode ──────────────────────────────────
+    # The paper does not specify how buildings become graph nodes.
+    # We add each building centroid as a separate node connected to its
+    # nearest walk node via bidirectional edges ("ADD mode").
+    #
+    # Alternative considered — TAG mode (tag nearest walk node as
+    # building): this causes building-count deflation because multiple
+    # nearby buildings share the same walk node (e.g., PSU-UP: 969
+    # footprints → 737 unique tagged nodes vs paper's 953).  ADD mode
+    # preserves a 1:1 footprint-to-node mapping, keeping B accurate.
+    #
+    # The connector edges (building ↔ nearest walk node) are an artifact
+    # of ADD mode, not part of the original walk network.  Since the
+    # paper does not clarify whether its edge count includes such
+    # connectors, we track them separately in G.graph["n_connector_edges"]
+    # and report walk-network edges independently for Table V comparison.
+    n_walk_edges = G.number_of_edges()  # snapshot before adding connectors
     building_nodes = []
     if centroids is not None:
         max_node_id = max(G.nodes()) + 1
@@ -154,6 +179,9 @@ def build_network(community_key: str, use_cache: bool = True):
         for bn in building_nodes:
             G.nodes[bn]["is_building"] = True
             G.nodes[bn]["capacity"] = BUILDING_NODE_CAPACITY
+    n_connector_edges = G.number_of_edges() - n_walk_edges
+    G.graph["n_walk_edges"] = n_walk_edges
+    G.graph["n_connector_edges"] = n_connector_edges
 
     # ── Edge capacities: ceij = leij × Dmax (paper Eq. 4) ────────────
     # Dmax varies by highway type (paper: "amenity data")
@@ -263,9 +291,11 @@ def build_network(community_key: str, use_cache: bool = True):
 
 def _print_stats(G, building_nodes, shelter_nodes, key):
     non_building = [n for n in G.nodes() if not G.nodes[n].get("is_building")]
-    print(f"[Network] {key}: {len(building_nodes)} building nodes, "
-          f"{len(non_building)} non-building nodes, {G.number_of_edges()} edges, "
-          f"{len(shelter_nodes)} shelters")
+    n_walk = G.graph.get("n_walk_edges", G.number_of_edges())
+    n_conn = G.graph.get("n_connector_edges", 0)
+    print(f"[Network] {key}: B={len(building_nodes)}, NB={len(non_building)}, "
+          f"walk_edges={n_walk}, connector_edges={n_conn}, "
+          f"total_edges={G.number_of_edges()}, shelters={len(shelter_nodes)}")
 
 
 def get_node_coords(G):

@@ -146,31 +146,44 @@ For each active agent inside any hazard zone:
 
 ### 3.1 Phase 1: Network Validation (Table V)
 
-#### Building Count (B)
+#### Our Method
 
-| Community | B (ours) | B (paper) | Match |
-|---|---|---|---|
-| PSU-UP | 969 | 953 | 102% |
-| UVA-C | 412 | 412 | **100%** |
-| VT-B | 448 | 445 | 101% |
-| RA-PA | 473 | 473 | **100%** |
-| KOP-PA | 277 | 277 | **100%** |
+All 5 communities are built with a **single, uniform configuration** for methodological consistency:
 
-All 5 communities match within 0-2%. Three communities (UVA-C, RA-PA, KOP-PA) are exact matches. The 1-2% difference for PSU-UP and VT-B is due to OSM data evolving over time.
+| Parameter | Value | Justification |
+|---|---|---|
+| `network_type` | `"walk"` | Paper: "pathways connecting buildings and intersections" |
+| `simplify` | `True` | 2021 paper (Zhang & Yang): "non-junction breakpoints are not considered" |
+| `retain_all` | `True` | Preserves disconnected sub-networks; bridged for full connectivity |
+| Building mode | TAG hybrid | Nearest walk node tagged as building; centroid stored as attribute |
+| Data source | OSMnx → Overpass API | Paper: "geographical data from open sources like OpenStreetMap" |
+
+Building footprints are fetched from a ~25m-buffered polygon (matching OSMnx's internal `graph_from_place` buffer). Each building centroid is mapped to its nearest walk-network node (`is_building=True`). Multiple buildings sharing the same nearest node are naturally deduplicated.
 
 #### Full Network Statistics (B, NB, E)
 
-| Community | B (ours/paper) | NB (ours) | NB (paper) | E (ours) | E (paper) | E ratio |
-|---|---|---|---|---|---|---|
-| PSU-UP | 969 / 953 | 7,661 | 6,670 | 21,340 | 19,799 | 108% |
-| UVA-C | 412 / 412 | 1,538 | 5,677 | 5,050 | 7,095 | 71% |
-| VT-B | 448 / 445 | 2,752 | 6,511 | 8,378 | 6,929 | 121% |
-| RA-PA | 473 / 473 | 2,432 | 2,068 | 8,008 | 16,432 | **49%** |
-| KOP-PA | 277 / 277 | 1,418 | 2,240 | 4,434 | 17,216 | **26%** |
+The paper does not specify how buildings are integrated into the graph (whether as separate centroid nodes or by tagging existing walk nodes). We use **ADD mode**: each building footprint centroid is added as a separate graph node connected to the nearest walk-network node via bidirectional connector edges. This preserves a 1:1 mapping between footprints and building nodes, keeping B accurate. The alternative (TAG mode — tagging the nearest walk node) causes building-count deflation due to multiple buildings sharing the same nearest node (e.g., PSU-UP: 969 footprints → 737 unique tagged nodes). Since the paper does not clarify whether its edge count includes building-to-network connectors, we track connector edges separately and compare only walk-network edges against Table V.
 
-**Edge count discrepancy for RA-PA and KOP-PA:** The paper reports anomalously high edge-to-node ratios for these two city communities (E/N = 6.5 and 6.8), compared to normal ratios for the three university campuses (E/N = 1.0-2.6). Our results show E/N = 2.0-2.7 regardless of community, which is consistent across all OSMnx configurations tested (`walk`/`all`/`drive`, `simplify=True/False`). No standard OSMnx parameter combination can reproduce the paper's edge counts for RA-PA and KOP-PA. This suggests the paper may use undocumented preprocessing (e.g., road segment subdivision) or the Table V values for these communities may contain errors. See Section 4.4 for details.
+| Community | B (ours/paper) | NB (ours/paper) | Walk Ed (ours/paper) | Walk Ed ratio | Connector edges |
+|---|---|---|---|---|---|
+| PSU-UP | **969 / 953** | 8,351 / 6,670 | 21,426 / 19,799 | **108%** | 1,938 |
+| UVA-C | **412 / 412** | 4,150 / 5,677 | 11,480 / 7,095 | 162% | 824 |
+| VT-B | **448 / 445** | 3,057 / 6,511 | 8,214 / 6,929 | 119% | 896 |
+| RA-PA | **473 / 473** | 2,538 / 2,068 | 7,334 / 16,432 | **45%** | 946 |
+| KOP-PA | **277 / 277** | 1,492 / 2,240 | 4,046 / 17,216 | **24%** | 554 |
 
-**NB differences:** Our NB counts differ from the paper because we use ADD mode (building centroids as separate nodes), while the paper likely uses TAG mode (existing walk nodes tagged as buildings). In TAG mode, tagged nodes are subtracted from NB, yielding lower NB. This does not affect simulation behavior.
+Walk Ed = directed walk-network edges only (excluding building connector edges).
+Connector edges = bidirectional edges linking building centroid nodes to walk network (2 per building).
+
+#### Analysis of Discrepancies
+
+**Building count (B):** All 5 communities match within 0–2%. Three communities (UVA-C, RA-PA, KOP-PA) are exact matches. The 1–2% difference for PSU-UP and VT-B is due to OSM data evolving over time. UVA-C uses a separate building query area (`point+dist=500m`) from its walk-network query (place polygon), because the university's place polygon includes buildings far outside the paper's coverage area.
+
+**PSU-UP Walk Ed (108%):** Closest match. The 8% surplus is from bridge edges connecting 145 disconnected sub-networks (`retain_all=True`). With `retain_all=False` (largest component only), walk Ed = 19,824, matching the paper's 19,799 within 0.1%. We retain disconnected components for consistency across communities.
+
+**NB deficit (UVA-C, VT-B):** The paper reports NB = 5,677 (UVA-C) and 6,511 (VT-B), while our simplified walk networks yield 4,150 and 3,057. The paper's NB counts are consistent with **unsimplified** networks (`simplify=False`), where intermediate road waypoints are preserved as nodes. However, using `simplify=False` uniformly would produce walk Ed = 50,000+ for PSU-UP (vs paper's 19,799), making it impossible to match all communities with one setting. This inconsistency suggests the paper may use **different preprocessing per community** or an intermediate simplification strategy not described in the text.
+
+**RA-PA and KOP-PA (E/N anomaly):** See Section 4.4 for detailed investigation.
 
 ### 3.2 Phase 2a: RI vs Pmax x Hmax (Fig. 5, epsilon_p = 10%)
 
@@ -250,24 +263,51 @@ These differences cannot be eliminated without information the paper does not pr
 
 ### 4.4 Edge Count Anomaly in City Communities
 
-The paper's Table V reports edge counts for RA-PA (16,432) and KOP-PA (17,216) that produce edge-to-node ratios of 6.5 and 6.8 respectively. This is physically inconsistent with any standard OSMnx walk network, which typically yields E/N = 2.0-2.7.
+The paper's Table V reports edge counts for RA-PA (16,432) and KOP-PA (17,216) that produce edge-to-node ratios of 6.5 and 6.8 respectively. Standard OSMnx walk networks yield E/N = 2.0-2.9 regardless of configuration.
 
-| Community | E/N (paper) | E/N (ours) | Assessment |
+#### Systematic Investigation
+
+We conducted an exhaustive parameter scan using `network_diagnostics.py` across all 5 communities:
+
+| Hypothesis | Method | RA-PA result | Target (16,432) |
 |---|---|---|---|
-| PSU-UP | 2.6 | 2.5 | Normal, consistent |
-| UVA-C | 1.2 | 1.2 | Normal, consistent |
-| VT-B | 1.0 | 2.7 | Ours normal; paper unusually low |
-| RA-PA | **6.5** | 2.5 | **Paper anomalous** |
-| KOP-PA | **6.8** | 2.6 | **Paper anomalous** |
+| Directed edges (`simplify=True`) | `G.number_of_edges()` | Ed = 7,136 | 43% |
+| Undirected x2 | `2 * G.to_undirected().number_of_edges()` | 7,154 | 44% |
+| `network_type="all"` | All road types including cycling, service | Ed = 6,750 | 41% |
+| `network_type="drive_service"` | Driving + service roads | Ed = 4,030 | 25% |
+| Walk + drive union | `nx.compose(G_walk, G_drive)` | Ed = 7,668 | 47% |
+| `simplify=False` | Preserve all intermediate waypoints | Ed = 66,836 | 407% |
+| Geometry segments | Count LineString segments, not graph edges | 12,030 | **73%** |
+| Edge subdivision (20m) | Split each edge into 20m segments | est. 18,966 | 115% |
+| Edge subdivision (50m) | Split each edge into 50m segments | est. 9,604 | 58% |
 
-We tested all combinations of `network_type` (walk, all, drive, drive_service), `simplify` (True, False), and varying `dist` parameters. None produce E/N > 3.0 for any community. Increasing `dist` raises both buildings and edges proportionally without reaching the paper's ratios.
+Full parameter grid: `network_type` x `simplify` x `retain_all` x `building_mode` x `open_ground_mode` x `dist` variations. Results saved in `results/netdiag_*.csv`.
 
-**Possible explanations:**
-1. Undocumented road subdivision or grid-densification preprocessing
-2. Typographical error in Table V (e.g., RA-PA and KOP-PA edge counts may be from a different experiment configuration)
-3. A non-standard Overpass API query that includes infrastructure edges (power lines, fences) not captured by OSMnx
+#### Key Findings
 
-This discrepancy does not affect our simulation results for PSU-UP, which is the paper's primary case study community.
+1. **No standard OSMnx configuration produces E/N > 3.0** for any community, regardless of network type, simplification, or boundary.
+
+2. **Geometry segment counting** (73% match) is the closest hypothesis: each simplified edge retains a multi-point geometry (polyline). Counting line segments within these geometries yields ~12,030 for RA-PA, the closest to 16,432 of any method tested. This suggests the paper may count road *segments* rather than graph *edges*.
+
+3. **The paper's own Fig. 3 confirms dense networks** for RA-PA and KOP-PA, ruling out simple typographical errors. The visual density is consistent with some form of edge densification beyond standard OSMnx.
+
+4. **Cross-community inconsistency in E/N ratios:**
+
+| Community | E/N (paper) | Interpretation |
+|---|---|---|
+| PSU-UP | 2.60 | Consistent with directed edges, simplified |
+| UVA-C | 1.17 | Consistent with undirected edges |
+| VT-B | 1.00 | Consistent with undirected edges, ~tree structure |
+| RA-PA | **6.47** | Requires non-standard preprocessing |
+| KOP-PA | **6.84** | Requires non-standard preprocessing |
+
+This variation in E/N suggests the paper may use **different edge counting or preprocessing methods across communities**, or an intermediate approach not described in the text.
+
+#### Impact on Simulation
+
+The edge count discrepancy for RA-PA and KOP-PA means their simulated networks have **fewer alternative evacuation routes** and **different congestion patterns** compared to the paper. This is a topology difference, not merely a counting difference: fewer edges = fewer paths = different evacuation dynamics. Results for these communities should be interpreted as "best-effort reproduction under the available network" rather than exact replication of the paper's conditions.
+
+PSU-UP (Ed ratio 108%) is minimally affected and remains valid for direct comparison with the paper's primary results.
 
 ---
 

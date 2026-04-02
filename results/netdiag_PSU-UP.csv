@@ -1,0 +1,17 @@
+source,network_type,simplify,retain_all,building_mode,open_ground,B,NB,total,Ed,Eu,og_nodes,og_edges,b_edges,n_comp,lc_ratio,score
+snap=current query=place net=walk,walk,True,False,add,off,969,7619,8588,21762,10891,0,0,1938,1,1.0,0.2582
+snap=current query=place net=walk,walk,True,False,tag,off,652,6967,7619,19824,9922,0,0,0,1,1.0,0.3616
+snap=current query=place net=walk,walk,True,False,add,add,969,8042,9011,22608,11314,423,846,1938,1,1.0,0.3644
+snap=current query=place net=walk,walk,True,True,add,off,969,8351,9320,23074,11549,0,0,1938,146,0.9006,0.4342
+snap=current query=place net=walk,walk,True,True,tag,off,737,7614,8351,21136,10580,0,0,0,146,0.9123,0.4357
+snap=current query=place net=walk,walk,True,False,tag,add,652,7377,8029,20644,10332,410,820,0,1,1.0,0.4645
+snap=current query=place net=walk,walk,True,True,tag,add,737,8118,8855,22144,11084,504,1008,0,146,0.9047,0.5622
+snap=current query=place net=walk,walk,True,True,add,add,969,8861,9830,24094,12059,510,1020,1938,146,0.8943,0.5622
+snap=current query=place net=walk,walk,False,False,add,off,969,21622,22591,49768,24884,0,0,1938,1,1.0,2.5153
+snap=current query=place net=walk,walk,False,False,tag,off,716,20906,21622,47830,23915,0,0,0,1,1.0,2.5909
+snap=current query=place net=walk,walk,False,False,add,add,969,22081,23050,50686,25343,459,918,1938,1,1.0,2.6073
+snap=current query=place net=walk,walk,False,False,tag,add,716,21369,22085,48756,24378,463,926,0,1,1.0,2.6837
+snap=current query=place net=walk,walk,False,True,tag,off,799,23845,24644,53722,26861,0,0,0,147,0.8774,3.0932
+snap=current query=place net=walk,walk,False,True,add,off,969,24644,25613,55660,27830,0,0,1938,147,0.8749,3.1172
+snap=current query=place net=walk,walk,False,True,tag,add,799,24403,25202,54838,27419,558,1116,0,147,0.8752,3.2051
+snap=current query=place net=walk,walk,False,True,add,add,969,25199,26168,56770,28385,555,1110,1938,147,0.8729,3.2284
