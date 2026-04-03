@@ -301,21 +301,18 @@ class EvacuationSimulation:
                         self._move_random_edge(p, out, dt)
                     else:
                         # Paper: "pi re-routes"
-                        self._move_reroute(p, dt)
+                        self._move_with_fresh_path(p, dt, congestion_aware=True)
             else:
                 # Node not congested
                 if p.is_panicked:
-                    # Paper Discussion: "panicking pedestrians choose
-                    # paths randomly at nodes"
                     out = list(self.G.out_edges(node, data=True, keys=True))
                     if out:
                         self._move_random_edge(p, out, dt)
                 else:
                     # Paper: "Update spi(t+1) based on Vpi(t)"
-                    # No reroute at non-congested nodes — just advance.
-                    # If agent enters a congested edge, the on-edge branch
-                    # handles it next step.
-                    self._move_along_path(p, dt)
+                    # "pedestrians rely on up-to-date observations"
+                    # → recompute path from current position every step
+                    self._move_with_fresh_path(p, dt, congestion_aware=False)
 
     # ══════════════════════════════════════════════════════════════════════
     #  Movement
@@ -344,36 +341,50 @@ class EvacuationSimulation:
             p._next_edge_progress = 0.0
             return
 
-        # Advance path index past v
-        pidx = p.path_idx
-        if p.path and pidx < len(p.path) and p.path[pidx] == v:
-            pidx += 1
-
-        # Panicked agents stop at v — they choose a new random edge
-        # next step from the at-node branch (paper: random at nodes,
-        # continue on edges, no path-following)
-        if p.is_panicked or budget <= 0 or not p.path or pidx >= len(p.path):
+        # Agent arrives at v with remaining budget.
+        # Panicked agents stop (choose random edge next step).
+        # Normal agents recompute path from v and continue.
+        if p.is_panicked or budget <= 0:
             p._next_node = v
             p._next_edge = None
             p._next_edge_progress = 0.0
-            p._next_path = (p.path, pidx)
             return
 
-        # Normal agents continue multi-edge traversal from v
-        self._traverse_path(p, v, pidx, budget)
+        # Recompute path from v (up-to-date observations)
+        path = self._find_path(v, p.destination)
+        if not path or len(path) < 2:
+            p._next_node = v
+            p._next_edge = None
+            p._next_edge_progress = 0.0
+            return
 
-    def _move_along_path(self, p, dt):
-        """Move along pre-computed path from current node.
-        Returns True if agent moved, False if blocked."""
-        if not p.path or p.path_idx >= len(p.path):
-            return False
+        p.path = path[1:]
+        p.path_idx = 0
+        self._traverse_path(p, v, 0, budget)
+
+    def _move_with_fresh_path(self, p, dt, congestion_aware=False):
+        """Paper: 'Update spi(t+1) based on Vpi(t)' — recompute shortest
+        path from current position every step using up-to-date network
+        observations, then advance along it.
+
+        congestion_aware: if True, penalize congested nodes/edges in path
+        (used at congested nodes where paper says 'pi re-routes')."""
+        if congestion_aware:
+            path = self._find_path_congestion_aware(p.current_node, p.destination)
+        else:
+            path = self._find_path(p.current_node, p.destination)
+
+        if not path or len(path) < 2:
+            return
+
+        p.path = path[1:]
+        p.path_idx = 0
 
         # Clear queuing if we can move (guard: don't overwrite Algo 2)
         if p.state == HumanState.QUEUING and p._next_state is None:
             p._next_state = HumanState.NORMAL
 
-        return self._traverse_path(p, p.current_node, p.path_idx,
-                                   p.speed * dt)
+        self._traverse_path(p, p.current_node, 0, p.speed * dt)
 
     def _traverse_path(self, p, start, pidx, budget):
         """Core multi-edge traversal from a node with given speed budget.
@@ -453,14 +464,6 @@ class EvacuationSimulation:
             p._next_edge_progress = budget
 
         p._next_path = ([], 0)
-
-    def _move_reroute(self, p, dt):
-        """Paper: 're-routes' — congestion-aware path from current node."""
-        path = self._find_path_congestion_aware(p.current_node, p.destination)
-        if path and len(path) > 1:
-            p.path = path[1:]
-            p.path_idx = 0
-            self._traverse_path(p, p.current_node, 0, p.speed * dt)
 
     def _find_path_congestion_aware(self, src, tgt):
         """A* shortest path with congestion penalty on nodes and edges.
