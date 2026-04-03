@@ -88,7 +88,8 @@ CASUALTY_PROB_PER_STEP = 0.001    # per step while inside hazard
 CASUALTY_CENTER_WEIGHT = 2.0      # higher near center
 
 # ── Shelter ─────────────────────────────────────────────────────────────────
-SHELTER_FRACTION = 0.15
+# Paper: "shelters provided by community authorities"
+# We use OSM amenity=shelter data (no artificial supplementation).
 
 # ── Visualization ───────────────────────────────────────────────────────────
 FIG_DPI = 150

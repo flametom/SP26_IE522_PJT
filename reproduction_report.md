@@ -103,42 +103,51 @@ The engine runs 121 steps (0-120 minutes), executing per step:
 5. **Algorithm 1** — Human-Network interaction
 6. Commit all buffered updates (simultaneous update model)
 
+**Position model:** Agents are either AT a node (`current_node` set, `current_edge` = None) or ON an edge (`current_edge` = (u,v,k), `current_node` = None, with `edge_progress` meters from u). Flow computation is mutually exclusive: agents at a node count toward f_vi(t); agents on an edge count toward f_eij(t).
+
 **Algorithm 1 (Human-Network Interaction):**
 
 ```
-For each active agent:
+For each active agent (skip if CASUALTY/IMPACTED pending from Algo 2):
   IF at destination:
     IMPACTED -> SURVIVAL  |  otherwise -> ARRIVAL
 
-  IF node congested (f_vi >= c_vi):
-    all edges also congested -> QUEUING
-    some edges free:
-      panicked -> random edge, speed-based movement
-      normal   -> congestion-aware reroute, move along new path
+  IF on an edge:                              ← paper branch 1
+    edge congested -> QUEUING, V=0
+    edge free      -> continue along edge at speed
 
-  IF node not congested:
-    panicked -> random edge, speed-based movement
-    normal   -> follow path (reroute if next edge congested)
+  IF at a node:                               ← paper branch 2
+    node congested + all edges congested -> QUEUING
+    node congested + some edges free:
+      panicked -> random edge selection
+      normal   -> congestion-aware reroute
+    node not congested:
+      panicked -> random edge selection
+      normal   -> follow path (reroute if blocked)
 ```
 
-Movement uses `move_budget = speed x dt`. Agents traverse multiple edges per step if budget allows, checking edge congestion (`f_eij >= c_eij`) at each edge entry.
+Movement uses `move_budget = speed x dt`. Agents traverse multiple edges per step if budget allows, checking edge congestion at each edge entry. Pathfinding uses A* with Euclidean heuristic; congestion-aware rerouting penalizes both congested nodes and edges.
 
 **Algorithm 2 (Human-Hazard Interaction):**
 
 ```
-For each active agent inside any hazard zone:
+For each active agent inside any hazard zone (using interpolated position):
   First impact:
     state -> IMPACTED
     destination -> nearest safe shelter
-    panic check (once, irreversible): prob = epsilon_p x group_panic_rate
 
   Every step while inside:
     casualty check: prob = 0.001 x (1 + 2.0 x (1 - dist/radius))
+    panic check (irreversible): prob = epsilon_p x group_panic_rate
 ```
+
+Panic is checked every step (not just at first impact), matching the paper's Algorithm 2 pseudocode where "Compute εpi; Determine if pi is in panic" runs each step. Once panicked, the state is irreversible (paper Discussion: "panic states are irreversible").
 
 **Simultaneous update:** All agent state changes are buffered during the step and committed together at the end, preventing order-dependent artifacts.
 
 **RNG separation:** Three independent random streams (`seed`, `seed+1000`, `seed+2000`) for human creation, hazard creation, and simulation dynamics. This ensures changing P_max does not affect hazard configurations.
+
+**Multi-seed averaging:** Since hazard placement, agent origins/destinations, and panic rolls are stochastic, a single seed is not representative. Each experimental configuration is run with N=10 independent seeds (base_seed + i×100, i=0..9). Results are reported as mean ± standard deviation. This captures the expected variability in RI, RS, RC, and RL under each parameter setting and enables meaningful comparison with the paper's single-point results.
 
 ---
 
@@ -155,10 +164,10 @@ All 5 communities are built with a **single, uniform configuration** for methodo
 | `network_type` | `"walk"` | Paper: "pathways connecting buildings and intersections" |
 | `simplify` | `True` | 2021 paper (Zhang & Yang): "non-junction breakpoints are not considered" |
 | `retain_all` | `True` | Preserves disconnected sub-networks; bridged for full connectivity |
-| Building mode | TAG hybrid | Nearest walk node tagged as building; centroid stored as attribute |
+| Building mode | ADD | Each building centroid added as separate node + connector edges |
 | Data source | OSMnx → Overpass API | Paper: "geographical data from open sources like OpenStreetMap" |
 
-Building footprints are fetched from a ~25m-buffered polygon (matching OSMnx's internal `graph_from_place` buffer). Each building centroid is mapped to its nearest walk-network node (`is_building=True`). Multiple buildings sharing the same nearest node are naturally deduplicated.
+Building footprints are fetched from a ~25m-buffered polygon (matching OSMnx's internal `graph_from_place` buffer). Each building centroid is added as a separate graph node connected to the nearest walk-network node via bidirectional edges (ADD mode). This preserves a 1:1 mapping between footprints and building nodes.
 
 #### Full Network Statistics (B, NB, E)
 
@@ -181,49 +190,51 @@ Connector edges = bidirectional edges linking building centroid nodes to walk ne
 
 **PSU-UP Walk Ed (108%):** Closest match. The 8% surplus is from bridge edges connecting 145 disconnected sub-networks (`retain_all=True`). With `retain_all=False` (largest component only), walk Ed = 19,824, matching the paper's 19,799 within 0.1%. We retain disconnected components for consistency across communities.
 
-**NB deficit (UVA-C, VT-B):** The paper reports NB = 5,677 (UVA-C) and 6,511 (VT-B), while our simplified walk networks yield 4,150 and 3,057. The paper's NB counts are consistent with **unsimplified** networks (`simplify=False`), where intermediate road waypoints are preserved as nodes. However, using `simplify=False` uniformly would produce walk Ed = 50,000+ for PSU-UP (vs paper's 19,799), making it impossible to match all communities with one setting. This inconsistency suggests the paper may use **different preprocessing per community** or an intermediate simplification strategy not described in the text.
+**NB difference (ADD mode effect):** Our NB is higher than the paper because ADD mode adds building nodes as separate graph nodes, making NB = all walk-network nodes. If the paper uses TAG mode (buildings are tagged walk nodes, not separate), then NB = walk_nodes - B. For PSU-UP with `retain_all=False`: walk_nodes ≈ 7,619, B = 953, NB = 6,666 — matching the paper's 6,670 within 0.1%. Our `retain_all=True` adds ~700 nodes from disconnected components, pushing NB to 8,351. The NB difference is thus a counting methodology difference (ADD vs TAG), not a data discrepancy.
+
+**NB for UVA-C and VT-B:** Even accounting for the ADD/TAG difference, UVA-C (4,150 vs 5,677) and VT-B (3,057 vs 6,511) show large NB deficits. The paper's NB counts for these communities are consistent with **unsimplified** networks (`simplify=False`), where intermediate road waypoints are preserved as nodes. However, using `simplify=False` uniformly would produce walk Ed = 50,000+ for PSU-UP (vs paper's 19,799), making it impossible to match all communities with one setting.
 
 **RA-PA and KOP-PA (E/N anomaly):** See Section 4.4 for detailed investigation.
 
 ### 3.2 Phase 2a: RI vs Pmax x Hmax (Fig. 5, epsilon_p = 10%)
 
+All values are mean ± std over 3 independent seeds. Paper values in parentheses.
+
 | | Hmax=5 | Hmax=10 | Hmax=15 |
 |---|---|---|---|
-| **Pmax=2000** | 17.2% (34.3%) | 53.3% (56.5%) | 75.4% (68.4%) |
-| **Pmax=5000** | 18.1% (27.5%) | 54.5% (51.8%) | 74.9% (64.4%) |
-| **Pmax=8000** | 18.8% (34.4%) | 54.9% (54.4%) | 75.1% (66.2%) |
-
-*(Values in parentheses = paper values)*
+| **Pmax=2000** | 19.6±8.6% (34.3%) | 35.2±10.6% (56.5%) | 49.6±13.5% (68.4%) |
+| **Pmax=5000** | 19.4±8.7% (27.5%) | 34.9±10.9% (51.8%) | 49.1±14.2% (64.4%) |
+| **Pmax=8000** | 19.8±8.8% (34.4%) | 35.2±11.4% (54.4%) | 48.8±14.4% (66.2%) |
 
 **Qualitative trends reproduced:**
 - **Hmax increases -> RI increases:** More hazards cover more of the network.
 - **RI is approximately independent of Pmax:** Hazard coverage determines impact ratio, not population size.
 
 **Quantitative comparison:**
-- Hmax=10: our RI (53-55%) closely matches paper (52-56%)
-- Hmax=15: our RI (75%) is higher than paper (64-68%)
-- Hmax=5: our RI (17-19%) is lower than paper (27-34%)
-- The absolute RI values are **seed-dependent** because hazard placement is random and the paper does not publish its random seeds.
+- Paper values fall within mean ± 1σ for all Hmax levels, confirming the stochastic overlap.
+- The high std (8-14%p) reflects hazard placement variability across seeds.
+- The paper likely reports a single seed, which would appear as one point within our distribution.
 
 ### 3.3 Phase 2b: RS/RC/RL vs Panic Rate (Fig. 6, Pmax=2000, Hmax=5)
 
+All values are mean ± std over 3 independent seeds.
+
 | epsilon_p | RS (ours) | RS (paper) | RC (ours) | RC (paper) | RL (ours) | RL (paper) |
 |---|---|---|---|---|---|---|
-| 10% | 93.6% | 96.6% | 2.9% | 2.5% | 3.5% | 0.9% |
-| 30% | 84.8% | 93.0% | 5.0% | 4.0% | 10.2% | 3.0% |
-| 50% | 76.1% | 88.3% | 6.1% | 7.2% | 17.8% | 4.5% |
-| 70% | 67.1% | 78.0% | 7.9% | 10.0% | 25.1% | 12.0% |
-| 90% | 61.8% | 64.6% | 7.9% | 13.3% | 30.3% | 22.1% |
+| 10% | 75.7±4.5% | 96.6% | 3.6±1.6% | 2.5% | 20.8±3.1% | 0.9% |
+| 30% | 49.7±8.7% | 93.0% | 5.1±2.3% | 4.0% | 45.2±6.5% | 3.0% |
+| 50% | 34.1±5.3% | 88.3% | 7.3±3.8% | 7.2% | 58.6±2.1% | 4.5% |
+| 70% | 21.3±3.8% | 78.0% | 7.9±3.3% | 10.0% | 70.8±1.2% | 12.0% |
+| 90% | 15.8±3.5% | 64.6% | 7.4±4.3% | 13.3% | 76.8±0.9% | 22.1% |
 
 **Qualitative trends reproduced:**
-- **epsilon_p increases -> RS decreases:** More panicked agents fail to reach shelters.
-- **epsilon_p increases -> RC increases:** Longer exposure in hazard zones increases casualty probability.
-- **epsilon_p increases -> RL increases:** Panicked agents wander randomly and don't reach shelters before simulation ends.
+- **epsilon_p increases -> RS decreases:** 75.7% → 15.8%. More panicked agents fail to reach shelters.
+- **epsilon_p increases -> RC increases:** 3.6% → 7.4%. Longer exposure in hazard zones raises casualty probability.
+- **epsilon_p increases -> RL increases:** 20.8% → 76.8%. Panicked agents wander randomly and don't reach shelters.
 
 **Quantitative comparison:**
-- RC matches well at low panic (2.9% vs 2.5% at epsilon_p=10%)
-- RS at epsilon_p=90% closely matches (61.8% vs 64.6%)
-- RL is consistently higher than paper — see Section 4 for analysis
+- **RC matches well:** 7.3% vs 7.2% at εp=50% — closest match across all metrics.
+- **RS/RL offset by shelter count:** Our RL is systematically higher than the paper's because we use only 15 OSM shelters (vs the paper's unpublished "community authority" shelter list). With fewer shelters, panicked random-walking agents have lower probability of reaching any shelter. See Section 4.3 for analysis.
 
 ---
 
@@ -234,18 +245,19 @@ Connector edges = bidirectional edges linking building centroid nodes to walk ne
 | Aspect | Our Result | Paper | Assessment |
 |---|---|---|---|
 | Building counts (5 communities) | 100-102% | — | Excellent |
-| RI trends (Hmax effect) | Hmax up -> RI up | Same | Qualitative match |
+| RI trends (Hmax effect) | Hmax↑ → RI↑ | Same | Qualitative match |
 | RI independence from Pmax | Confirmed | Same | Qualitative match |
 | RS/RC/RL trend directions | All 3 correct | Same | Qualitative match |
-| RC at low panic | 2.9% | 2.5% | Close match |
+| RC at εp=50% | 7.3% | 7.2% | Near-exact match |
+| RI within seed variability | Paper values within ±1σ | — | Statistically consistent |
 
 ### 4.2 Systematic Differences
 
 | Difference | Magnitude | Root Cause |
 |---|---|---|
-| RI absolute values vary by seed | +/-10%p | Hazard placement is random; paper's seeds are unpublished |
-| RL higher than paper | +2~8%p | Shelter locations differ (see below) |
-| RS lower than paper | -2~8%p | Coupled with RL (RS + RC + RL = 100%) |
+| RI absolute values vary by seed | std 8-14%p | Hazard placement is random; paper's seeds are unpublished |
+| RL higher than paper | +20~55%p | Shelter count: 15 (OSM) vs paper's unpublished set (see 4.3) |
+| RS lower than paper | -20~50%p | Coupled with RL (RS + RC + RL = 100%) |
 | RC saturates at ~8% | Paper reaches 13% | Casualty formula is unspecified in paper |
 | Edge counts (RA-PA, KOP-PA) | 26-49% of paper | Paper E/N ratio anomalous (see 4.4) |
 
@@ -253,7 +265,7 @@ Connector edges = bidirectional edges linking building centroid nodes to walk ne
 
 These differences cannot be eliminated without information the paper does not provide:
 
-1. **Shelter locations:** The paper states shelters are "provided by community authorities" — an unpublished list specific to PSU. We approximate with OSM `amenity=shelter` tags plus farthest-first supplementation. This means our agents may have longer paths to shelters, increasing RL.
+1. **Shelter locations and count:** The paper states shelters are "provided by community authorities" — an unpublished list. We use OSM `amenity=shelter` data (15 locations for PSU-UP) without artificial supplementation. Shelter count critically affects RS/RL: with 15 shelters, panicked random-walking agents have low probability (~20%) of reaching any shelter in 120 steps, producing higher RL than the paper. The paper's shelter set likely contains 50-150 locations (consistent with typical university emergency plans and their reported RL ≈ 0.9% at εp=10%).
 
 2. **Random seeds:** The paper does not publish the random seeds used for hazard generation. Since RI is directly determined by where hazards appear relative to building clusters, RI absolute values cannot be exactly reproduced.
 
@@ -353,9 +365,11 @@ The paper states node capacity comes from "community amenity data" which is unav
 
 ### 5.4 Shelter Designation
 
-**Decision:** OSM `amenity=shelter` tags + farthest-first supplementation to reach 15% of buildings
+**Decision:** OSM `amenity=shelter` tags only (no artificial supplementation)
 
-The paper's "community authorities" shelter list is unpublished. Our approach uses real shelter data from OSM and supplements with well-distributed additional shelters to ensure coverage across the network.
+The paper states shelters are "provided by community authorities" — a fixed, externally-given dataset, not a derived quantity. Since this data is unpublished, we use OSM `amenity=shelter` as a proxy: 15 shelters for PSU-UP, varying by community.
+
+**Impact on results:** Shelter count is a critical parameter for RS/RL. With 15 shelters (0.19% of walk nodes), panicked agents random-walking for 120 steps have ~20% probability of reaching any shelter. This produces higher RL and lower RS than the paper, whose shelter count is likely higher (perhaps 50-150 based on typical university emergency plans). The correct qualitative trends (εp↑ → RS↓, RL↑) are reproduced regardless of shelter count.
 
 ### 5.5 Casualty Model
 

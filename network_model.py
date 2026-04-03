@@ -21,7 +21,7 @@ import osmnx as ox
 import networkx as nx
 from config import (
     COMMUNITIES, NODE_CAPACITY_DEFAULT,
-    BUILDING_NODE_CAPACITY, SHELTER_FRACTION,
+    BUILDING_NODE_CAPACITY,
 )
 
 
@@ -225,8 +225,8 @@ def build_network(community_key: str, use_cache: bool = True):
 
     # ── Designate shelters from OSM data ─────────────────────────────
     # Paper: "shelters provided by community authorities"
-    # Use actual OSM amenity=shelter locations, supplemented with
-    # well-distributed building nodes to ensure coverage.
+    # We use OSM amenity=shelter as proxy for community-designated shelters.
+    # No artificial supplementation — shelter count reflects actual data.
     shelter_nodes = []
     try:
         if "place" in comm:
@@ -248,28 +248,28 @@ def build_network(community_key: str, use_cache: bool = True):
     except Exception:
         pass
 
-    # Supplement: add building nodes to reach target count,
-    # choosing those farthest from existing shelters for coverage.
-    n_target = max(1, int(len(building_nodes) * SHELTER_FRACTION))
-    remaining = [b for b in building_nodes if b not in shelter_nodes]
-    while len(shelter_nodes) < n_target and remaining:
-        # Pick building farthest from any existing shelter
-        best, best_dist = None, -1
-        for b in remaining:
-            bx, by = G.nodes[b]["x"], G.nodes[b]["y"]
-            min_d = min(
-                (np.hypot(bx - G.nodes[s]["x"], by - G.nodes[s]["y"])
-                 for s in shelter_nodes),
-                default=float("inf")
-            )
-            if min_d > best_dist:
-                best_dist = min_d
-                best = b
-        if best is not None:
-            shelter_nodes.append(best)
-            remaining.remove(best)
-        else:
-            break
+    # Fallback: if no OSM shelters found, use a minimal set of
+    # well-distributed building nodes so the simulation can run.
+    if not shelter_nodes:
+        print("[Network] Warning: no OSM shelters found, using 5 distributed buildings")
+        remaining = list(building_nodes)
+        rng_s = np.random.default_rng(0)
+        first = rng_s.choice(remaining)
+        shelter_nodes.append(first)
+        remaining.remove(first)
+        for _ in range(min(4, len(remaining))):
+            best, best_dist = None, -1
+            for b in remaining:
+                bx, by = G.nodes[b]["x"], G.nodes[b]["y"]
+                min_d = min(
+                    np.hypot(bx - G.nodes[s]["x"], by - G.nodes[s]["y"])
+                    for s in shelter_nodes)
+                if min_d > best_dist:
+                    best_dist = min_d
+                    best = b
+            if best:
+                shelter_nodes.append(best)
+                remaining.remove(best)
 
     for sn in shelter_nodes:
         G.nodes[sn]["is_shelter"] = True

@@ -140,18 +140,23 @@ def plot_flow_snapshots(G, sim_history, community_key):
 
 def plot_impacted_rate(results, community_key):
     """
-    results : list of dicts with keys P_max, H_max, RI
+    results : list of dicts with keys P_max, H_max, RI (and optionally RI_std)
     """
     fig, ax = plt.subplots(figsize=(7, 5))
     h_vals = sorted(set(r["H_max"] for r in results))
     p_vals = sorted(set(r["P_max"] for r in results))
 
     for hm in h_vals:
-        ris = [next(r["RI"] for r in results
-                    if r["H_max"] == hm and r["P_max"] == pm)
-               for pm in p_vals]
-        ax.plot(p_vals, [ri * 100 for ri in ris],
-                marker="o", label=f"Hmax = {hm}")
+        ris, stds = [], []
+        for pm in p_vals:
+            r = next(r for r in results if r["H_max"] == hm and r["P_max"] == pm)
+            ris.append(r["RI"] * 100)
+            stds.append(r.get("RI_std", 0) * 100)
+        if any(s > 0 for s in stds):
+            ax.errorbar(p_vals, ris, yerr=stds, marker="o",
+                        capsize=4, label=f"Hmax = {hm}")
+        else:
+            ax.plot(p_vals, ris, marker="o", label=f"Hmax = {hm}")
 
     ax.set_xlabel("Pmax")
     ax.set_ylabel("Impacted Rate RI (%)")
@@ -171,6 +176,7 @@ def plot_impacted_rate(results, community_key):
 def plot_panic_performance(results, community_key):
     """
     results : list of dicts with keys panic_rate, RS, RC, RL
+              (and optionally RS_std, RC_std, RL_std)
     """
     fig, ax = plt.subplots(figsize=(7, 5))
     panic_vals = sorted(set(r["panic_rate"] for r in results))
@@ -178,12 +184,17 @@ def plot_panic_performance(results, community_key):
     for metric, color, label in [("RS", "tab:blue", "RS"),
                                   ("RC", "tab:red", "RC"),
                                   ("RL", "tab:orange", "RL")]:
-        vals = [next(r[metric] for r in results
-                     if r["panic_rate"] == ep)
-                for ep in panic_vals]
-        ax.plot([p * 100 for p in panic_vals],
-                [v * 100 for v in vals],
-                marker="s", color=color, label=label)
+        vals, stds = [], []
+        for ep in panic_vals:
+            r = next(r for r in results if r["panic_rate"] == ep)
+            vals.append(r[metric] * 100)
+            stds.append(r.get(f"{metric}_std", 0) * 100)
+        x = [p * 100 for p in panic_vals]
+        if any(s > 0 for s in stds):
+            ax.errorbar(x, vals, yerr=stds, marker="s", color=color,
+                        capsize=4, label=label)
+        else:
+            ax.plot(x, vals, marker="s", color=color, label=label)
 
     ax.set_xlabel("Background Panic Rate εp (%)")
     ax.set_ylabel("Performance Metrics (%)")
