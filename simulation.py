@@ -312,9 +312,10 @@ class EvacuationSimulation:
                         self._move_random_edge(p, out, dt)
                 else:
                     # Paper: "Update spi(t+1) based on Vpi(t)"
-                    moved = self._move_along_path(p, dt)
-                    if not moved:
-                        self._move_reroute(p, dt)
+                    # No reroute at non-congested nodes — just advance.
+                    # If agent enters a congested edge, the on-edge branch
+                    # handles it next step.
+                    self._move_along_path(p, dt)
 
     # ══════════════════════════════════════════════════════════════════════
     #  Movement
@@ -376,7 +377,13 @@ class EvacuationSimulation:
 
     def _traverse_path(self, p, start, pidx, budget):
         """Core multi-edge traversal from a node with given speed budget.
-        Returns True if agent moved.  Sets position and path buffers."""
+        Returns True if agent moved.  Sets position and path buffers.
+
+        Paper Algorithm 1: 'Update spi(t+1) based on Vpi(t)' — agents
+        advance along their path without pre-checking edge congestion.
+        If they end up on a congested edge, the on-edge branch handles
+        it next step (Queuing).  This matches the paper's model where
+        agents only discover edge congestion AFTER entering the edge."""
         cur = start
         prog = 0.0
 
@@ -384,14 +391,10 @@ class EvacuationSimulation:
             nxt = p.path[pidx]
             elen = self._edge_length(cur, nxt)
 
-            # Check edge exists and is not congested
+            # Check edge exists (topology only, no congestion pre-check)
             edge_ref = self._resolve_edge(cur, nxt)
             if edge_ref is None:
                 break
-            eu, ev, ek = edge_ref
-            ed = self.G.edges[eu, ev, ek]
-            if ed.get("flow", 0) >= ed.get("capacity", 1):
-                break  # congested
 
             if budget >= elen:
                 # Complete this edge → arrive at nxt
