@@ -32,6 +32,10 @@ from visualization import (
     plot_impacted_rate, plot_panic_performance,
 )
 
+# Shelter count determined via sensitivity analysis (see reproduction_report Section 4.5).
+# Paper's shelter list is unpublished; 600 best matches RS at εp=90%.
+N_SHELTERS = 600
+
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
@@ -43,7 +47,8 @@ def single_run(community_key, P_max, H_max, panic_rate, seed=42, verbose=True):
     rng_hazard = np.random.default_rng(seed + 1000)
     rng_sim = np.random.default_rng(seed + 2000)
 
-    G, building_nodes, shelter_nodes = build_network(community_key)
+    G, building_nodes, shelter_nodes = build_network(community_key,
+                                                      n_shelters=N_SHELTERS)
 
     if verbose:
         print(f"\n{'='*60}")

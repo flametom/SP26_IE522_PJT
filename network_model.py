@@ -28,7 +28,7 @@ from config import (
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
 
 
-def build_network(community_key: str, use_cache: bool = True):
+def build_network(community_key: str, use_cache: bool = True, n_shelters: int = None):
     """
     Build or load the community spatial network.
 
@@ -42,7 +42,8 @@ def build_network(community_key: str, use_cache: bool = True):
         Subset of building_nodes designated as shelters.
     """
     os.makedirs(CACHE_DIR, exist_ok=True)
-    cache_path = os.path.join(CACHE_DIR, f"{community_key}_network.pkl")
+    suffix = f"_s{n_shelters}" if n_shelters else ""
+    cache_path = os.path.join(CACHE_DIR, f"{community_key}{suffix}_network.pkl")
 
     if use_cache and os.path.exists(cache_path):
         with open(cache_path, "rb") as f:
@@ -248,16 +249,19 @@ def build_network(community_key: str, use_cache: bool = True):
     except Exception:
         pass
 
-    # Fallback: if no OSM shelters found, use a minimal set of
-    # well-distributed building nodes so the simulation can run.
-    if not shelter_nodes:
-        print("[Network] Warning: no OSM shelters found, using 5 distributed buildings")
-        remaining = list(building_nodes)
-        rng_s = np.random.default_rng(0)
-        first = rng_s.choice(remaining)
-        shelter_nodes.append(first)
-        remaining.remove(first)
-        for _ in range(min(4, len(remaining))):
+    # If n_shelters specified, supplement OSM shelters with farthest-first
+    # building nodes to reach the target count.  This enables sensitivity
+    # analysis on shelter count (paper's shelter list is unpublished).
+    target = n_shelters if n_shelters else max(len(shelter_nodes), 5)
+    if len(shelter_nodes) < target:
+        remaining = [b for b in building_nodes if b not in shelter_nodes]
+        if not shelter_nodes:
+            # Seed first shelter from random building
+            rng_s = np.random.default_rng(0)
+            first = rng_s.choice(remaining)
+            shelter_nodes.append(first)
+            remaining.remove(first)
+        while len(shelter_nodes) < target and remaining:
             best, best_dist = None, -1
             for b in remaining:
                 bx, by = G.nodes[b]["x"], G.nodes[b]["y"]
@@ -270,6 +274,8 @@ def build_network(community_key: str, use_cache: bool = True):
             if best:
                 shelter_nodes.append(best)
                 remaining.remove(best)
+            else:
+                break
 
     for sn in shelter_nodes:
         G.nodes[sn]["is_shelter"] = True

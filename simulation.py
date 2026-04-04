@@ -90,6 +90,34 @@ class EvacuationSimulation:
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             return None
 
+    def _find_path_noisy(self, src, tgt):
+        """Shortest path with noisy edge weights for panicked agents.
+
+        Paper III-C: "When panicked, human agents deviate from optimal
+        evacuation routes" due to "limited observations of the community
+        network."  Modeled as multiplicative noise on edge lengths —
+        panicked agents misperceive distances, producing suboptimal but
+        directionally correct paths."""
+        try:
+            coords = self.coords
+            rng = self.rng
+
+            def heuristic(u, v):
+                ux, uy = coords.get(u, (0, 0))
+                vx, vy = coords.get(v, (0, 0))
+                return ((ux - vx) ** 2 + (uy - vy) ** 2) ** 0.5
+
+            def noisy_weight(u, v, data):
+                base = data.get("length", 1.0)
+                # Multiplicative noise: perceived length = actual × (1 + noise)
+                # noise ~ Exp(1) gives heavy-tailed distortion
+                return base * (1.0 + rng.exponential(1.0))
+
+            return nx.astar_path(self.G_undirected, src, tgt,
+                                 heuristic=heuristic, weight=noisy_weight)
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            return None
+
     def _resolve_edge(self, u, v):
         """Return (actual_u, actual_v, key) for directed edge between u, v."""
         edata = self.G.get_edge_data(u, v)
@@ -305,13 +333,14 @@ class EvacuationSimulation:
             else:
                 # Node not congested
                 if p.is_panicked:
+                    # Paper Discussion: "panicking pedestrians choose
+                    # paths randomly at nodes" + "persist in following
+                    # random paths once panic occurs"
                     out = list(self.G.out_edges(node, data=True, keys=True))
                     if out:
                         self._move_random_edge(p, out, dt)
                 else:
                     # Paper: "Update spi(t+1) based on Vpi(t)"
-                    # "pedestrians rely on up-to-date observations"
-                    # → recompute path from current position every step
                     self._move_with_fresh_path(p, dt, congestion_aware=False)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -341,16 +370,15 @@ class EvacuationSimulation:
             p._next_edge_progress = 0.0
             return
 
-        # Agent arrives at v with remaining budget.
-        # Panicked agents stop (choose random edge next step).
-        # Normal agents recompute path from v and continue.
+        # Panicked agents stop at v — next step they choose random edge
+        # from the at-node branch (paper: "persist in following random paths")
         if p.is_panicked or budget <= 0:
             p._next_node = v
             p._next_edge = None
             p._next_edge_progress = 0.0
             return
 
-        # Recompute path from v (up-to-date observations)
+        # Normal agents recompute path from v and continue
         path = self._find_path(v, p.destination)
         if not path or len(path) < 2:
             p._next_node = v
@@ -364,13 +392,18 @@ class EvacuationSimulation:
 
     def _move_with_fresh_path(self, p, dt, congestion_aware=False):
         """Paper: 'Update spi(t+1) based on Vpi(t)' — recompute shortest
-        path from current position every step using up-to-date network
-        observations, then advance along it.
+        path from current position every step, then advance.
 
-        congestion_aware: if True, penalize congested nodes/edges in path
+        Panicked agents use noisy edge weights (paper: "limited observations
+        of the community network" → imperfect knowledge of distances,
+        causing deviation from optimal routes).
+
+        congestion_aware: if True, also penalize congested nodes/edges
         (used at congested nodes where paper says 'pi re-routes')."""
         if congestion_aware:
             path = self._find_path_congestion_aware(p.current_node, p.destination)
+        elif p.is_panicked:
+            path = self._find_path_noisy(p.current_node, p.destination)
         else:
             path = self._find_path(p.current_node, p.destination)
 
