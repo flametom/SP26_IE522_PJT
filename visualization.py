@@ -36,44 +36,45 @@ def _get_view_bounds(G, margin=0.05):
 # ═══════════════════════════════════════════════════════════════════════════
 
 def plot_network(G, building_nodes, shelter_nodes, community_key):
-    """Draw spatial network matching paper Fig. 3 style: white dots + gray edges."""
+    """Draw spatial network — white background, clear node/edge colors."""
     fig, ax = plt.subplots(figsize=(10, 10))
-    ax.set_facecolor("black")
+    ax.set_facecolor("white")
 
     # Edges
     for u, v, d in G.edges(data=True):
         if u in G.nodes and v in G.nodes:
             x0, y0 = G.nodes[u]["x"], G.nodes[u]["y"]
             x1, y1 = G.nodes[v]["x"], G.nodes[v]["y"]
-            ax.plot([x0, x1], [y0, y1], color="gray", linewidth=0.3, alpha=0.5)
+            ax.plot([x0, x1], [y0, y1], color="#cccccc", linewidth=0.3, alpha=0.6)
 
-    # Non-building nodes (white)
+    # Non-building nodes (gray)
     non_b = [n for n in G.nodes() if not G.nodes[n].get("is_building")]
     xs = [G.nodes[n]["x"] for n in non_b]
     ys = [G.nodes[n]["y"] for n in non_b]
-    ax.scatter(xs, ys, s=0.5, c="white", alpha=0.4, label="Intersection")
+    ax.scatter(xs, ys, s=0.5, c="gray", alpha=0.3, label="Intersection")
 
-    # Building nodes (blue)
+    # Building nodes (dark goldenrod)
     bxs = [G.nodes[n]["x"] for n in building_nodes if n in G.nodes]
     bys = [G.nodes[n]["y"] for n in building_nodes if n in G.nodes]
-    ax.scatter(bxs, bys, s=2, c="dodgerblue", alpha=0.6, label="Building")
+    ax.scatter(bxs, bys, s=3, c="#B8860B", alpha=0.7, label="Building")
 
     # Shelters (green triangles)
     sxs = [G.nodes[n]["x"] for n in shelter_nodes if n in G.nodes]
     sys_ = [G.nodes[n]["y"] for n in shelter_nodes if n in G.nodes]
-    ax.scatter(sxs, sys_, s=15, c="lime", marker="^", alpha=0.9, label="Shelter")
+    ax.scatter(sxs, sys_, s=18, c="tab:green", marker="^", alpha=0.9,
+               label="Shelter")
 
     # Crop to dense core (ignore outlier bridge edges)
     xlo, xhi, ylo, yhi = _get_view_bounds(G)
     ax.set_xlim(xlo, xhi)
     ax.set_ylim(ylo, yhi)
 
-    ax.set_title(f"Spatial Network — {community_key}", color="white", fontsize=14)
+    ax.set_title(f"Spatial Network — {community_key}", fontsize=14)
     ax.legend(loc="upper right", fontsize=8)
     ax.set_aspect("equal")
     ax.axis("off")
     path = os.path.join(OUTPUT_DIR, f"fig3_network_{community_key}.png")
-    fig.savefig(path, dpi=FIG_DPI, bbox_inches="tight", facecolor="black")
+    fig.savefig(path, dpi=FIG_DPI, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"[Viz] Saved {path}")
 
@@ -82,54 +83,170 @@ def plot_network(G, building_nodes, shelter_nodes, community_key):
 #  2. Pedestrian flow snapshots over time  (Fig. 4)
 # ═══════════════════════════════════════════════════════════════════════════
 
-def plot_flow_snapshots(G, sim_history, community_key):
-    """Create a row of panels showing pedestrian positions at key time steps."""
-    # Match snapshot times to history entries by closest 't' value
+# Density-mapped states: shown as scatter with per-point alpha from KDE.
+# (state_key, base_color_light, base_color_dark, zorder, label)
+_DENSITY_LAYERS = [
+    ("ARRIVAL",  "#C8F0C8", "#3D8B37", 5, "Arrival"),
+    ("SURVIVAL", "#B0E8C0", "#1B7A3D", 5, "Survival"),
+    ("NORMAL",   "#BDD7F0", "#1A56DB", 6, "Normal"),
+    ("QUEUING",  "#FDE8C8", "#D4760A", 7, "Queuing"),
+    ("IMPACTED", "#F8C0C0", "#CC1111", 8, "Impacted"),
+]
+# Individual-marker states: always shown as distinct markers.
+_MARKER_LAYERS = [
+    ("CASUALTY", "#222222", "X", 20, 1.0, 9, "Casualty"),
+]
+
+
+def plot_flow_snapshots(G, sim_history, community_key,
+                        building_nodes=None, shelter_nodes=None):
+    """Pedestrian flow snapshots with buildings, shelters, hazard zones,
+    and state-coded agents (shape + color + size hierarchy)."""
     time_map = {round(s["t"]): i for i, s in enumerate(sim_history)}
     indices = [time_map[t] for t in SNAPSHOT_TIMES if t in time_map]
     n = len(indices)
     if n == 0:
         return
-    fig, axes = plt.subplots(1, n, figsize=(4 * n, 4))
+    fig, axes = plt.subplots(1, n, figsize=(4.5 * n, 4.5))
     if n == 1:
         axes = [axes]
 
+    xlo, xhi, ylo, yhi = _get_view_bounds(G)
+
+    bset = set(building_nodes) if building_nodes else set(
+        nd for nd in G.nodes() if G.nodes[nd].get("is_building"))
+    sset = set(shelter_nodes) if shelter_nodes else set()
+
     for ax, idx in zip(axes, indices):
-        ax.set_facecolor("black")
+        ax.set_facecolor("#FAFAFA")
         snap = sim_history[idx]
 
-        # Draw edges lightly
+        # ── Layer 1: edges (subtle background) ────────────────────
         for u, v, d in G.edges(data=True):
             if u in G.nodes and v in G.nodes:
                 x0, y0 = G.nodes[u]["x"], G.nodes[u]["y"]
                 x1, y1 = G.nodes[v]["x"], G.nodes[v]["y"]
-                ax.plot([x0, x1], [y0, y1], color="gray",
-                        linewidth=0.2, alpha=0.3)
+                ax.plot([x0, x1], [y0, y1], color="#E0E0E0",
+                        linewidth=0.25, alpha=0.5, zorder=1)
 
-        # Pedestrians only — paper Fig. 4 shows red dots, no hazard circles
-        pxs, pys = [], []
-        for _, info in snap["positions"].items():
-            if "x" in info and "y" in info:
-                pxs.append(info["x"])
-                pys.append(info["y"])
-            elif info.get("node") is not None and info["node"] in G.nodes:
-                pxs.append(G.nodes[info["node"]]["x"])
-                pys.append(G.nodes[info["node"]]["y"])
-        ax.scatter(pxs, pys, s=1, c="red", alpha=0.6)
+        # ── Layer 2: buildings (gray squares — distinct from blue agents)
+        if bset:
+            bxs = [G.nodes[nd]["x"] for nd in bset if nd in G.nodes]
+            bys = [G.nodes[nd]["y"] for nd in bset if nd in G.nodes]
+            ax.scatter(bxs, bys, s=4, c="#B8860B", marker="s",
+                       alpha=0.35, zorder=2, label="Building")
 
-        # Crop to dense core
-        xlo, xhi, ylo, yhi = _get_view_bounds(G)
+        # ── Layer 3: shelters (green triangles) ───────────────────
+        if sset:
+            sxs = [G.nodes[nd]["x"] for nd in sset if nd in G.nodes]
+            sys_ = [G.nodes[nd]["y"] for nd in sset if nd in G.nodes]
+            ax.scatter(sxs, sys_, s=10, c="#2D8A4E", marker="^",
+                       alpha=0.35, zorder=3, label="Shelter")
+
+        # ── Layer 4: hazard zones ─────────────────────────────────
+        for hz in snap.get("hazards", []):
+            cx, cy, r = hz["center"][0], hz["center"][1], hz["radius"]
+            ax.add_patch(plt.Circle((cx, cy), r,
+                         color="#FF4444", alpha=0.08, zorder=4))
+            ax.add_patch(plt.Circle((cx, cy), r, fill=False,
+                         color="#CC0000", linewidth=0.8,
+                         linestyle="--", alpha=0.5, zorder=4))
+
+        # ── Layer 5-8: density-mapped agent states ───────────────
+        from scipy.stats import gaussian_kde
+        from matplotlib.colors import LinearSegmentedColormap
+
+        for state_key, c_light, c_dark, zord, label in _DENSITY_LAYERS:
+            pxs, pys = [], []
+            for _, info in snap["positions"].items():
+                if info.get("state") != state_key:
+                    continue
+                if "x" in info and "y" in info:
+                    pxs.append(info["x"])
+                    pys.append(info["y"])
+                elif info.get("node") is not None and info["node"] in G.nodes:
+                    pxs.append(G.nodes[info["node"]]["x"])
+                    pys.append(G.nodes[info["node"]]["y"])
+            if len(pxs) < 2:
+                if pxs:
+                    ax.scatter(pxs, pys, s=6, c=c_dark, marker="o",
+                               alpha=0.8, zorder=zord, label=label)
+                continue
+
+            xs_a, ys_a = np.array(pxs), np.array(pys)
+            try:
+                kde = gaussian_kde(np.vstack([xs_a, ys_a]),
+                                   bw_method=0.08)
+                density = kde(np.vstack([xs_a, ys_a]))
+                d_norm = (density - density.min()) / (
+                    density.max() - density.min() + 1e-10)
+            except Exception:
+                d_norm = np.ones(len(xs_a)) * 0.5
+
+            cmap = LinearSegmentedColormap.from_list(
+                state_key, [c_light, c_dark])
+            sz = 4 if state_key in ("ARRIVAL", "SURVIVAL") else 6
+            ax.scatter(xs_a, ys_a, s=sz, c=d_norm, cmap=cmap,
+                       vmin=0, vmax=1, alpha=0.7, zorder=zord,
+                       label=label)
+
+        # ── Layer 9: individual-marker states (Casualty) ──────────
+        for state_key, color, marker, sz, alpha, zord, label in _MARKER_LAYERS:
+            pxs, pys = [], []
+            for _, info in snap["positions"].items():
+                if info.get("state") != state_key:
+                    continue
+                if "x" in info and "y" in info:
+                    pxs.append(info["x"])
+                    pys.append(info["y"])
+                elif info.get("node") is not None and info["node"] in G.nodes:
+                    pxs.append(G.nodes[info["node"]]["x"])
+                    pys.append(G.nodes[info["node"]]["y"])
+            if pxs:
+                ax.scatter(pxs, pys, s=sz, c=color, marker=marker,
+                           alpha=alpha, zorder=zord,
+                           linewidths=0.5, edgecolors="black",
+                           label=label)
+
+        # ── Counts subtitle ───────────────────────────────────────
+        counts = snap.get("counts", {})
+        sub = (f"Active:{counts.get('active',0)}  "
+               f"Imp:{counts.get('impacted',0)}  "
+               f"Surv:{counts.get('survival',0)}  "
+               f"Cas:{counts.get('casualty',0)}")
+        ax.set_title(f"t = {int(snap['t'])} min\n{sub}", fontsize=8)
+
         ax.set_xlim(xlo, xhi)
         ax.set_ylim(ylo, yhi)
-
-        ax.set_title(f"t = {int(snap['t'])} min", color="white", fontsize=10)
         ax.set_aspect("equal")
         ax.axis("off")
 
-    fig.suptitle(f"Pedestrian Flow — {community_key}",
-                 color="white", fontsize=13)
+    # ── Shared legend (last panel) ────────────────────────────────
+    from matplotlib.lines import Line2D
+    legend_items = [
+        Line2D([0], [0], marker="s", color="w", markerfacecolor="#B8860B",
+               markersize=5, label="Building"),
+        Line2D([0], [0], marker="^", color="w", markerfacecolor="#2D8A4E",
+               markersize=6, label="Shelter"),
+        Line2D([0], [0], marker="o", color="w", markerfacecolor="#4A90D9",
+               markersize=5, label="Normal"),
+        Line2D([0], [0], marker="D", color="w", markerfacecolor="#F5A623",
+               markersize=4, label="Queuing"),
+        Line2D([0], [0], marker="o", color="w", markerfacecolor="#FF3333",
+               markersize=6, label="Impacted"),
+        Line2D([0], [0], marker="o", color="w", markerfacecolor="#50C878",
+               markersize=5, alpha=0.5, label="Survival"),
+        Line2D([0], [0], marker="X", color="w", markerfacecolor="#222222",
+               markeredgecolor="black", markersize=7, label="Casualty"),
+        Line2D([0], [0], linestyle="--", color="#CC0000",
+               linewidth=1, label="Hazard zone"),
+    ]
+    axes[-1].legend(handles=legend_items, loc="lower right",
+                    fontsize=5, framealpha=0.8, ncol=2)
+
+    fig.suptitle(f"Pedestrian Flow — {community_key}", fontsize=13)
     path = os.path.join(OUTPUT_DIR, f"fig4_flow_{community_key}.png")
-    fig.savefig(path, dpi=FIG_DPI, bbox_inches="tight", facecolor="black")
+    fig.savefig(path, dpi=FIG_DPI, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"[Viz] Saved {path}")
 
@@ -141,19 +258,20 @@ def plot_flow_snapshots(G, sim_history, community_key):
 def plot_impacted_rate(results, community_key):
     """
     results : list of dicts with keys P_max, H_max, RI (and optionally RI_std)
+    Error bars show ±SD (standard deviation across seeds).
     """
     fig, ax = plt.subplots(figsize=(7, 5))
     h_vals = sorted(set(r["H_max"] for r in results))
     p_vals = sorted(set(r["P_max"] for r in results))
 
     for hm in h_vals:
-        ris, stds = [], []
+        ris, sds = [], []
         for pm in p_vals:
             r = next(r for r in results if r["H_max"] == hm and r["P_max"] == pm)
             ris.append(r["RI"] * 100)
-            stds.append(r.get("RI_std", 0) * 100)
-        if any(s > 0 for s in stds):
-            ax.errorbar(p_vals, ris, yerr=stds, marker="o",
+            sds.append(r.get("RI_std", 0) * 100)
+        if any(s > 0 for s in sds):
+            ax.errorbar(p_vals, ris, yerr=sds, marker="o",
                         capsize=4, label=f"Hmax = {hm}")
         else:
             ax.plot(p_vals, ris, marker="o", label=f"Hmax = {hm}")
@@ -177,6 +295,7 @@ def plot_panic_performance(results, community_key):
     """
     results : list of dicts with keys panic_rate, RS, RC, RL
               (and optionally RS_std, RC_std, RL_std)
+    Error bars show ±SD (standard deviation across seeds).
     """
     fig, ax = plt.subplots(figsize=(7, 5))
     panic_vals = sorted(set(r["panic_rate"] for r in results))
@@ -184,14 +303,14 @@ def plot_panic_performance(results, community_key):
     for metric, color, label in [("RS", "tab:blue", "RS"),
                                   ("RC", "tab:red", "RC"),
                                   ("RL", "tab:orange", "RL")]:
-        vals, stds = [], []
+        vals, sds = [], []
         for ep in panic_vals:
             r = next(r for r in results if r["panic_rate"] == ep)
             vals.append(r[metric] * 100)
-            stds.append(r.get(f"{metric}_std", 0) * 100)
+            sds.append(r.get(f"{metric}_std", 0) * 100)
         x = [p * 100 for p in panic_vals]
-        if any(s > 0 for s in stds):
-            ax.errorbar(x, vals, yerr=stds, marker="s", color=color,
+        if any(s > 0 for s in sds):
+            ax.errorbar(x, vals, yerr=sds, marker="s", color=color,
                         capsize=4, label=label)
         else:
             ax.plot(x, vals, marker="s", color=color, label=label)
@@ -212,15 +331,18 @@ def plot_panic_performance(results, community_key):
 # ═══════════════════════════════════════════════════════════════════════════
 
 def plot_time_series(sim_history, community_key, tag=""):
-    """Plot active / arrival / survival / casualty counts over time."""
+    """Plot active / impacted / arrival / survival / casualty counts over time."""
     ts = [s["t"] for s in sim_history]
     active = [s["counts"]["active"] for s in sim_history]
+    impacted = [s["counts"].get("impacted", 0) for s in sim_history]
     arrival = [s["counts"]["arrival"] for s in sim_history]
     survival = [s["counts"]["survival"] for s in sim_history]
     casualty = [s["counts"]["casualty"] for s in sim_history]
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.plot(ts, active, label="Active", color="tab:blue")
+    ax.plot(ts, impacted, label="Impacted", color="tab:purple",
+            linestyle="--", linewidth=2)
     ax.plot(ts, arrival, label="Arrival", color="tab:green")
     ax.plot(ts, survival, label="Survival", color="tab:cyan")
     ax.plot(ts, casualty, label="Casualty", color="tab:red")

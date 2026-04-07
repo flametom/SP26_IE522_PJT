@@ -27,6 +27,8 @@ Time: 1 step = 1 minute, 120 steps total.
 
 import numpy as np
 import networkx as nx
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import dijkstra as sp_dijkstra
 from agents import HumanState
 from network_model import nearest_shelter
 from config import (
@@ -51,6 +53,10 @@ class EvacuationSimulation:
         self.coords = {n: (d["x"], d["y"]) for n, d in G.nodes(data=True)}
         self._shelter_set = set(shelter_nodes)
 
+        # Scipy sparse matrix for fast batch SSSP (replaces per-agent A*)
+        self._build_sparse_matrix()
+        self._batch_preds = {}
+
         self.history = []
         self._snapshot_steps = {int(t / self.dt) for t in SNAPSHOT_TIMES
                                 if t <= SIM_DURATION}
@@ -61,8 +67,22 @@ class EvacuationSimulation:
     # ══════════════════════════════════════════════════════════════════════
 
     def _initial_routing(self):
+        # Batch SSSP for all initial destinations at once
+        dest_set = set(p.destination for p in self.humans)
+        dest_list = list(dest_set)
+        dest_indices = np.array([self._node_to_idx[d] for d in dest_list])
+        _, predecessors = sp_dijkstra(
+            self._sp_matrix, indices=dest_indices,
+            return_predecessors=True,
+        )
+        self._batch_preds = {
+            d: predecessors[i] for i, d in enumerate(dest_list)
+        }
         for p in self.humans:
-            self._assign_path(p, p.destination)
+            path = self._find_path_batch(p.origin, p.destination)
+            if path and len(path) > 1:
+                p.path = path[1:]
+                p.path_idx = 0
 
     def _assign_path(self, p, target):
         """Compute shortest path from agent's effective position to target."""
@@ -118,6 +138,91 @@ class EvacuationSimulation:
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             return None
 
+    # ══════════════════════════════════════════════════════════════════════
+    #  Scipy batch SSSP — replaces per-agent networkx A*
+    # ══════════════════════════════════════════════════════════════════════
+
+    def _build_sparse_matrix(self):
+        """Convert undirected graph to scipy CSR matrix (one-time cost)."""
+        nodes_list = list(self.G_undirected.nodes())
+        self._node_to_idx = {n: i for i, n in enumerate(nodes_list)}
+        self._idx_to_node = nodes_list
+        n = len(nodes_list)
+
+        rows, cols, weights = [], [], []
+        for u, v, d in self.G_undirected.edges(data=True):
+            i, j = self._node_to_idx[u], self._node_to_idx[v]
+            w = d.get("length", 1.0)
+            rows.append(i); cols.append(j); weights.append(w)
+            rows.append(j); cols.append(i); weights.append(w)
+
+        self._sp_matrix = csr_matrix(
+            (weights, (rows, cols)), shape=(n, n)
+        )
+
+    def _batch_compute_paths(self):
+        """Pre-compute shortest-path trees for active agents' destinations.
+        Called once per step; results are looked up in _find_path_batch."""
+        dest_set = set()
+        for p in self.humans:
+            if not p.is_active:
+                continue
+            if p._next_state in (HumanState.CASUALTY, HumanState.IMPACTED):
+                continue
+            if p.is_panicked:
+                continue
+            dest_set.add(p.destination)
+
+        if not dest_set:
+            self._batch_preds = {}
+            return
+
+        dest_list = list(dest_set)
+        dest_indices = np.array([self._node_to_idx[d] for d in dest_list])
+
+        _, predecessors = sp_dijkstra(
+            self._sp_matrix, indices=dest_indices,
+            return_predecessors=True,
+        )
+
+        self._batch_preds = {
+            d: predecessors[i] for i, d in enumerate(dest_list)
+        }
+
+    def _find_path_batch(self, src, tgt):
+        """Look up shortest path from pre-computed batch SSSP.
+        Falls back to networkx A* if target not in batch."""
+        if src == tgt:
+            return [src]
+
+        preds = self._batch_preds.get(tgt)
+        if preds is None:
+            return self._find_path(src, tgt)
+
+        src_idx = self._node_to_idx.get(src)
+        tgt_idx = self._node_to_idx.get(tgt)
+        if src_idx is None or tgt_idx is None:
+            return None
+
+        # Reconstruct path: follow predecessors from src toward tgt.
+        # preds[j] = predecessor of j on shortest-path tree rooted at tgt,
+        # so chasing preds from src walks toward tgt.
+        path_idx = []
+        node = src_idx
+        limit = len(self._idx_to_node)
+        for _ in range(limit):
+            path_idx.append(node)
+            if node == tgt_idx:
+                break
+            nxt = preds[node]
+            if nxt < 0:          # -9999 = unreachable
+                return None
+            node = nxt
+        else:
+            return None
+
+        return [self._idx_to_node[i] for i in path_idx]
+
     def _resolve_edge(self, u, v):
         """Return (actual_u, actual_v, key) for directed edge between u, v."""
         edata = self.G.get_edge_data(u, v)
@@ -159,6 +264,7 @@ class EvacuationSimulation:
                 p.clear_buffers()
 
             self._algorithm2()
+            self._batch_compute_paths()
             self._algorithm1()
             self._commit_updates()
 
@@ -379,7 +485,7 @@ class EvacuationSimulation:
             return
 
         # Normal agents recompute path from v and continue
-        path = self._find_path(v, p.destination)
+        path = self._find_path_batch(v, p.destination)
         if not path or len(path) < 2:
             p._next_node = v
             p._next_edge = None
@@ -405,7 +511,7 @@ class EvacuationSimulation:
         elif p.is_panicked:
             path = self._find_path_noisy(p.current_node, p.destination)
         else:
-            path = self._find_path(p.current_node, p.destination)
+            path = self._find_path_batch(p.current_node, p.destination)
 
         if not path or len(path) < 2:
             return
@@ -601,13 +707,14 @@ class EvacuationSimulation:
     def _record(self, t_min):
         positions = {}
         for p in self.humans:
-            if p.is_active:
-                px, py = p.get_position(self.G)
-                positions[p.agent_id] = {
-                    "x": px, "y": py,
-                    "node": p.current_node,
-                    "state": p.state.name,
-                }
+            if not p.departed:
+                continue
+            px, py = p.get_position(self.G)
+            positions[p.agent_id] = {
+                "x": px, "y": py,
+                "node": p.current_node,
+                "state": p.state.name,
+            }
         hz = [{"center": h.center.copy(), "radius": h.radius}
               for h in self.hazards if h.active]
         self.history.append({
@@ -615,6 +722,8 @@ class EvacuationSimulation:
             "positions": positions, "hazards": hz,
             "counts": {
                 "active": sum(1 for p in self.humans if p.is_active),
+                "impacted": sum(1 for p in self.humans
+                                if p.state == HumanState.IMPACTED),
                 "arrival": sum(1 for p in self.humans
                                if p.state == HumanState.ARRIVAL),
                 "survival": sum(1 for p in self.humans

@@ -15,6 +15,7 @@ Usage:
 
 import argparse
 import json
+import multiprocessing as mp
 import os
 import time
 import numpy as np
@@ -39,12 +40,21 @@ N_SHELTERS = 600
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
+# ── Shared state for parallel workers (set once in parent, read via fork COW) ──
+_shared_G = None
+_shared_bn = None
+_shared_sn = None
 
-def single_run(community_key, P_max, H_max, panic_rate, seed=42, verbose=True):
+
+def single_run(community_key, P_max, H_max, panic_rate, seed=42,
+               hazard_seed=None, verbose=True):
     """Execute one simulation run and return metrics + history."""
-    # Separate RNG streams so hazard config is independent of Pmax
+    # Hazard seed defaults to seed+1000 for backward compat (single runs).
+    # For multi-seed experiments, caller passes a fixed hazard_seed so
+    # the scenario stays constant and only agent behavior varies.
     rng_human = np.random.default_rng(seed)
-    rng_hazard = np.random.default_rng(seed + 1000)
+    rng_hazard = np.random.default_rng(hazard_seed if hazard_seed is not None
+                                        else seed + 1000)
     rng_sim = np.random.default_rng(seed + 2000)
 
     G, building_nodes, shelter_nodes = build_network(community_key,
@@ -81,21 +91,40 @@ def single_run(community_key, P_max, H_max, panic_rate, seed=42, verbose=True):
     return metrics, sim.history, G, building_nodes, shelter_nodes
 
 
-def multi_seed_run(community_key, P_max, H_max, panic_rate,
-                   n_seeds=10, base_seed=42):
-    """Run simulation across multiple seeds and return aggregated metrics.
+def _worker_single_run(args):
+    """Worker function for parallel execution.
+    Uses shared network from parent process (fork copy-on-write).
+    hazard_seed is fixed across seeds within a config (scenario is constant;
+    only agent placement and behavior rolls vary)."""
+    community_key, P_max, H_max, panic_rate, seed, hazard_seed = args
+    G, bn, sn = _shared_G, _shared_bn, _shared_sn
 
-    Stochastic elements (hazard placement, agent origins/destinations,
-    panic rolls) vary with seed.  Averaging over seeds gives robust
-    estimates of the expected RI/RS/RC/RL under the given parameters.
-    """
-    all_metrics = []
-    for i in range(n_seeds):
-        seed = base_seed + i * 100
-        m, _, _, _, _ = single_run(community_key, P_max, H_max, panic_rate,
-                                    seed=seed, verbose=False)
-        all_metrics.append(m)
+    rng_human = np.random.default_rng(seed)
+    rng_hazard = np.random.default_rng(hazard_seed)   # FIXED per config
+    rng_sim = np.random.default_rng(seed + 2000)
 
+    humans = create_human_agents(G, bn, P_max, HUMAN_GROUPS, rng_human)
+    hazards = create_hazard_agents(G, bn, H_max,
+                                    HAZARD_TYPES, SIM_DURATION, rng_hazard)
+
+    t0 = time.time()
+    sim = EvacuationSimulation(G, humans, hazards, sn, panic_rate, rng_sim)
+    metrics = sim.run(verbose=False)
+    elapsed = time.time() - t0
+
+    metrics.update({
+        "community": community_key,
+        "H_max": H_max,
+        "panic_rate": panic_rate,
+        "seed": seed,
+        "elapsed_sec": round(elapsed, 1),
+    })
+    return metrics
+
+
+def _aggregate_metrics(all_metrics, community_key, P_max, H_max,
+                       panic_rate, n_seeds):
+    """Compute mean ± std from a list of per-seed metric dicts."""
     agg = {
         "community": community_key,
         "P_max": P_max, "H_max": H_max,
@@ -107,6 +136,21 @@ def multi_seed_run(community_key, P_max, H_max, panic_rate,
         agg[key] = float(np.mean(vals))
         agg[f"{key}_std"] = float(np.std(vals))
     agg["elapsed_sec"] = sum(m["elapsed_sec"] for m in all_metrics)
+    return agg
+
+
+def multi_seed_run(community_key, P_max, H_max, panic_rate,
+                   n_seeds=10, base_seed=42):
+    """Run simulation across multiple seeds (serial) and return aggregated metrics."""
+    all_metrics = []
+    for i in range(n_seeds):
+        seed = base_seed + i * 100
+        m, _, _, _, _ = single_run(community_key, P_max, H_max, panic_rate,
+                                    seed=seed, verbose=False)
+        all_metrics.append(m)
+
+    agg = _aggregate_metrics(all_metrics, community_key, P_max, H_max,
+                             panic_rate, n_seeds)
 
     print(f"  [{community_key}] Pmax={P_max} Hmax={H_max} εp={panic_rate:.0%} "
           f"({n_seeds} seeds): "
@@ -128,51 +172,98 @@ def run_network_verification():
         m, hist, G, bn, sn = single_run(key, P_max=2000, H_max=5,
                                          panic_rate=0.10)
         plot_network(G, bn, sn, key)
-        plot_flow_snapshots(G, hist, key)
+        plot_flow_snapshots(G, hist, key, bn, sn)
         plot_time_series(hist, key)
 
 
-def run_full_experiment(community_key, n_seeds=10):
+def run_full_experiment(community_key, n_seeds=10, n_workers=8):
     """Phase 2 — Full factorial on one community (Fig. 5 & 6).
-    Each configuration is run n_seeds times; results are mean ± std."""
-    all_results = []
+    All seed×config combinations run in parallel via fork pool."""
+    global _shared_G, _shared_bn, _shared_sn
     t0 = time.time()
 
+    # Build network once; shared with workers via fork COW
+    _shared_G, _shared_bn, _shared_sn = build_network(
+        community_key, n_shelters=N_SHELTERS)
+
     print(f"\n{'='*60}")
-    print(f" Full Experiment: {community_key}  ({n_seeds} seeds per config)")
+    print(f" Full Experiment: {community_key}  "
+          f"({n_seeds} seeds × {n_workers} workers)")
     print(f"{'='*60}")
 
-    # ── Fig. 5: RI vs Pmax × Hmax (εp = 10%) ─────────────────────────
-    print("\n[Phase 2a] RI vs Pmax × Hmax (εp = 10%)")
-    ri_results = []
+    # ── Prepare ALL run args ──────────────────────────────────────────
+    # Hazard seed is FIXED within each config (scenario constant).
+    # Only agent placement (seed) and behavior rolls (seed+2000) vary.
+    base_seed = 42
+    hazard_seed = base_seed + 1000   # = 1042, same for all seeds
+    ri_args = []     # Phase 2a: RI vs Pmax × Hmax (εp = 10%)
+    panic_args = []  # Phase 2b: RS/RC/RL vs εp (Pmax=2000, Hmax=5)
+
     for pm in P_MAX_LEVELS:
         for hm in H_MAX_LEVELS:
-            agg, _ = multi_seed_run(community_key, pm, hm,
-                                     panic_rate=0.10, n_seeds=n_seeds)
+            for i in range(n_seeds):
+                ri_args.append((community_key, pm, hm, 0.10,
+                                base_seed + i * 100, hazard_seed))
+
+    for ep in PANIC_RATES:
+        for i in range(n_seeds):
+            panic_args.append((community_key, 2000, 5, ep,
+                               base_seed + i * 100, hazard_seed))
+
+    all_args = ri_args + panic_args
+    total_runs = len(all_args)
+    print(f"\n[Parallel] Submitting {total_runs} runs to {n_workers} workers...")
+
+    # ── Execute in parallel ──────────────────────────────────────────
+    ctx = mp.get_context("fork")
+    with ctx.Pool(n_workers) as pool:
+        all_raw = pool.map(_worker_single_run, all_args)
+
+    ri_raw = all_raw[:len(ri_args)]
+    panic_raw = all_raw[len(ri_args):]
+
+    # ── Aggregate Phase 2a ───────────────────────────────────────────
+    print("\n[Phase 2a] RI vs Pmax × Hmax (εp = 10%)")
+    ri_results = []
+    idx = 0
+    for pm in P_MAX_LEVELS:
+        for hm in H_MAX_LEVELS:
+            batch = ri_raw[idx:idx + n_seeds]
+            idx += n_seeds
+            agg = _aggregate_metrics(batch, community_key, pm, hm,
+                                     0.10, n_seeds)
             ri_results.append(agg)
-            all_results.append(agg)
+            print(f"  Pmax={pm} Hmax={hm}: "
+                  f"RI={agg['RI']:.1%}±{agg['RI_std']:.1%}")
     plot_impacted_rate(ri_results, community_key)
 
-    # ── Fig. 6: RS/RC/RL vs εp (Pmax=2000, Hmax=5) ──────────────────
+    # ── Aggregate Phase 2b ───────────────────────────────────────────
     print("\n[Phase 2b] RS/RC/RL vs εp (Pmax=2000, Hmax=5)")
     panic_results = []
+    idx = 0
     for ep in PANIC_RATES:
-        agg, _ = multi_seed_run(community_key, 2000, 5, ep,
-                                 n_seeds=n_seeds)
+        batch = panic_raw[idx:idx + n_seeds]
+        idx += n_seeds
+        agg = _aggregate_metrics(batch, community_key, 2000, 5,
+                                 ep, n_seeds)
         panic_results.append(agg)
-        all_results.append(agg)
+        print(f"  εp={ep:.0%}: RS={agg['RS']:.1%}±{agg['RS_std']:.1%}  "
+              f"RC={agg['RC']:.1%}±{agg['RC_std']:.1%}  "
+              f"RL={agg['RL']:.1%}±{agg['RL_std']:.1%}")
     plot_panic_performance(panic_results, community_key)
 
-    # Also generate one detailed run for flow snapshots
-    m, hist, G, bn, sn = single_run(community_key, 2000, 5, 0.10, verbose=False)
-    plot_flow_snapshots(G, hist, community_key)
+    # ── Flow snapshot from one representative run ────────────────────
+    m, hist, G, bn, sn = single_run(community_key, 2000, 5, 0.10,
+                                     verbose=False)
+    plot_flow_snapshots(G, hist, community_key, bn, sn)
 
     elapsed = time.time() - t0
+    all_results = ri_results + panic_results
     out = os.path.join(RESULTS_DIR, f"experiment_{community_key}.json")
     with open(out, "w") as f:
         json.dump(all_results, f, indent=2, default=str)
     print(f"\n[Experiment] {len(all_results)} configs × {n_seeds} seeds "
-          f"= {len(all_results) * n_seeds} runs  ({elapsed:.0f}s total)")
+          f"= {total_runs} runs  ({elapsed:.0f}s total)")
     print(f"[Experiment] Results → {out}")
 
 
@@ -187,20 +278,24 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--nseeds", type=int, default=10,
                         help="Number of seeds for multi-seed experiments")
+    parser.add_argument("--workers", type=int, default=8,
+                        help="Number of parallel workers (default: 8)")
     args = parser.parse_args()
 
     if args.experiment == "networks":
         run_network_verification()
     elif args.experiment == "full":
-        run_full_experiment(args.community, n_seeds=args.nseeds)
+        run_full_experiment(args.community, n_seeds=args.nseeds,
+                            n_workers=args.workers)
     elif args.experiment == "all":
         run_network_verification()
-        run_full_experiment(args.community, n_seeds=args.nseeds)
+        run_full_experiment(args.community, n_seeds=args.nseeds,
+                            n_workers=args.workers)
     else:
         m, hist, G, bn, sn = single_run(
             args.community, args.pmax, args.hmax, args.panic, args.seed)
         plot_network(G, bn, sn, args.community)
-        plot_flow_snapshots(G, hist, args.community)
+        plot_flow_snapshots(G, hist, args.community, bn, sn)
         plot_time_series(hist, args.community)
         out = os.path.join(RESULTS_DIR, f"run_{args.community}.json")
         with open(out, "w") as f:
