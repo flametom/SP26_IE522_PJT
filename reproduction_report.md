@@ -61,7 +61,7 @@ Our implementation:
 
 6. Node capacity: sum of incident edge capacities
 
-7. Shelters: OSM amenity=shelter + farthest-first supplementation (15% of buildings)
+7. Shelters: OSM amenity=shelter + farthest-first supplementation to 62% of buildings (600 for PSU-UP)
 ```
 
 **Visualization note:** `retain_all=True` includes up to 135 disconnected components (PSU-UP), some far from the main campus. Bridge edges to these outliers distort the network shape. Our Fig. 3 and Fig. 4 visualizations crop to the 1st-99th percentile of node coordinates to show the dense core, matching the paper's compact network appearance.

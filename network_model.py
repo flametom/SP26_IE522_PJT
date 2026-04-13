@@ -225,9 +225,10 @@ def build_network(community_key: str, use_cache: bool = True, n_shelters: int = 
         G.nodes[n]["capacity"] = max(10, incident_cap)
 
     # ── Designate shelters from OSM data ─────────────────────────────
-    # Paper: "shelters provided by community authorities"
-    # We use OSM amenity=shelter as proxy for community-designated shelters.
-    # No artificial supplementation — shelter count reflects actual data.
+    # Paper: "shelters provided by community authorities" (unpublished list).
+    # Base: OSM amenity=shelter. If n_shelters is specified, supplement
+    # with farthest-first building nodes to reach target count (62% of
+    # buildings = 600 for PSU-UP). See reproduction_report Section 4.5.
     shelter_nodes = []
     try:
         if "place" in comm:

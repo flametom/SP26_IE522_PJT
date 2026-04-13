@@ -88,8 +88,10 @@ CASUALTY_PROB_PER_STEP = 0.001    # per step while inside hazard
 CASUALTY_CENTER_WEIGHT = 2.0      # higher near center
 
 # ── Shelter ─────────────────────────────────────────────────────────────────
-# Paper: "shelters provided by community authorities"
-# We use OSM amenity=shelter data (no artificial supplementation).
+# Paper: "shelters provided by community authorities" (unpublished list).
+# We use OSM amenity=shelter as base, supplemented with farthest-first
+# building nodes to 62% of buildings (600 for PSU-UP).
+# See reproduction_report Section 4.5 for sensitivity analysis.
 
 # ── Visualization ───────────────────────────────────────────────────────────
 FIG_DPI = 150

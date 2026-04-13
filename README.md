@@ -60,12 +60,12 @@ python main.py --experiment all
 ### Output
 
 Results are saved to the `results/` directory:
-- `network_<community>.png` — Spatial network visualization (Fig. 3)
-- `flow_<community>.png` — Pedestrian flow snapshots (Fig. 4)
-- `RI_<community>.png` — Impacted rate chart (Fig. 5)
-- `panic_<community>.png` — Performance metrics vs. panic rate (Fig. 6)
-- `timeseries_*.png` — Agent status over time
-- `experiment_<community>.json` — Numerical results
+- `fig3_network_<community>.png` — Spatial network visualization (Fig. 3)
+- `fig4_flow_<community>.png` — Pedestrian flow snapshots (Fig. 4)
+- `fig5_RI_<community>.png` — Impacted rate chart (Fig. 5)
+- `fig6_panic_<community>.png` — Performance metrics vs. panic rate (Fig. 6)
+- `timeseries_<community>.png` — Agent status over time
+- `experiment_<community>.json` / `final_experiment_<community>.json` — Numerical results
 
 ## Project Structure
 
