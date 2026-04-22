@@ -25,6 +25,7 @@ Pathfinding: A* with Euclidean heuristic for spatial networks.
 Time: 1 step = 1 minute, 120 steps total.
 """
 
+import time
 import numpy as np
 import networkx as nx
 from scipy.sparse import csr_matrix
@@ -50,7 +51,9 @@ class EvacuationSimulation:
         self.dt = DT
         self.use_batch_sssp = use_batch_sssp     # NEW
 
-        # Timing instrumentation (populated by run())
+        # Timing instrumentation (populated by run()).  "total" = sum of instrumented
+        # sections; it excludes per-step hazard update, departure check, and buffer
+        # clear.  Use wall-clock timing around sim.run() for end-to-end measurement.
         self.timings = {
             "flows": 0.0, "algo2": 0.0, "batch_sssp": 0.0,
             "algo1": 0.0, "commit": 0.0, "total": 0.0,
@@ -170,6 +173,8 @@ class EvacuationSimulation:
     def _batch_compute_paths(self):
         """Pre-compute shortest-path trees for active agents' destinations.
         Called once per step; results are looked up in _find_path_batch."""
+        # Flag gates the per-step batch recompute only; _initial_routing still uses
+        # scipy SSSP once at construction time (one call vs 121 per-step calls).
         if not self.use_batch_sssp:
             self._batch_preds = {}
             return
@@ -257,7 +262,6 @@ class EvacuationSimulation:
     # ══════════════════════════════════════════════════════════════════════
 
     def run(self, verbose=True):
-        import time
         for step in range(N_STEPS + 1):
             t_min = step * self.dt
 
