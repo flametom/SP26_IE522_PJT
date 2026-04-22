@@ -638,4 +638,58 @@ Near-exact match at boundary points (RS 90\%, RC 10/30\%).
 \end{columns}
 \end{frame}
 
+% ============================================================
+% SLIDE 16: Differences & structurally unresolvable gaps
+% ============================================================
+\begin{frame}[t]{Gaps with the paper \& why they persist}
+\footnotesize
+
+\begin{columns}[T,onlytextwidth]
+\column{0.52\textwidth}
+\textbf{What remains off, by 2--10\%p:}
+\vspace{0.2em}
+\begin{itemize}\itemsep0.25em
+  \item $RI$ slightly higher (+2--4\%p)
+  \item $RS$ at low $\varepsilon_p$ lower ($-5$\%p)
+  \item $RC$ saturates at $\sim$6\% (paper reaches 13\%)
+  \item $RL$ higher ($+5$--$10$\%p)
+\end{itemize}
+
+\vspace{0.4em}
+\textbf{Root causes --- all structurally unresolvable without additional paper data:}
+\vspace{0.2em}
+\begin{enumerate}\itemsep0.25em
+  \item Paper's \keyterm{shelter list} is unpublished\\
+        (we fitted 62\% of buildings via sensitivity analysis)
+  \item Paper's \keyterm{casualty formula} is unspecified\\
+        (we use a per-step distance-weighted probability)
+  \item Paper's \keyterm{hazard random seed} is unpublished\\
+        (we swept 200 seeds $\to$ 1135 minimizes $RI$ error)
+  \item OSM data has evolved since the paper's download
+\end{enumerate}
+
+\column{0.44\textwidth}
+\begin{alertblock}{\small Shelter sensitivity analysis}
+\scriptsize
+\begin{tabular}{lcc}
+\toprule
+\# shelters & $RS$ at $\varepsilon_p$=90\% & error \\
+\midrule
+15 (OSM)  & 13.8\% & --50.8\%p \\
+100       & 35.7\% & --28.9\%p \\
+300       & 53.5\% & --11.1\%p \\
+\textbf{600} & \textbf{64.3\%} & \textbf{--0.3\%p} \\
+700       & 62.2\% & --2.4\%p \\
+\midrule
+Paper     & 64.6\% & --- \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+$\Rightarrow$ \textbf{600 shelters} (62\% of buildings) produces the closest match.\\
+Applied consistently across all 5 communities.
+\end{alertblock}
+\end{columns}
+\end{frame}
+
 \end{document}
