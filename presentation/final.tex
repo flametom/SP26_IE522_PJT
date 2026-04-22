@@ -338,4 +338,89 @@ Batch SSSP   & $O(K)$ & $O(K \cdot (V{+}E) + V)$ \\
 \end{columns}
 \end{frame}
 
+% ============================================================
+% SLIDE 8: Engineering ③ --- A* heuristic + per-step recomputation
+% ============================================================
+\begin{frame}[t,fragile,shrink=5]{Engineering \textcircled{\scriptsize 3}: A* heuristic, per-step recomputation, panic noise}
+\footnotesize
+
+\begin{columns}[T,onlytextwidth]
+\column{0.50\textwidth}
+\begin{block}{\scriptsize A* with Euclidean heuristic}
+\vspace{-0.3em}
+\begin{semiverbatim}\tiny
+def heuristic(u, v):
+    ux, uy = coords[u]; vx, vy = coords[v]
+    return ((ux-vx)**2 + (uy-vy)**2) ** 0.5
+\end{semiverbatim}
+\vspace{-0.3em}
+Used for single-source fallbacks (shelter redirect, congestion-aware) where batch doesn't apply. $\sim 2$--$3\times$ faster than plain Dijkstra on spatial graphs.
+\end{block}
+
+\begin{block}{\scriptsize Panicked agents: \emph{noisy} weights}
+\vspace{-0.3em}
+\begin{semiverbatim}\tiny
+def noisy_weight(u, v, data):
+    base = data["length"]
+    return base * (1.0 + rng.exponential(1.0))
+\end{semiverbatim}
+\vspace{-0.3em}
+Models paper's ``limited observations'' for panicked agents.
+\end{block}
+
+\column{0.46\textwidth}
+\begin{alertblock}{\small Per-step recomputation is kept}
+\scriptsize
+Paper Section III-C: \emph{``pedestrians rely on up-to-date observations of their immediate surroundings.''}\\[4pt]
+We do NOT cache paths.\\
+Every non-panicked agent's path is recomputed every step against the current flow state.
+\end{alertblock}
+
+\vspace{0.6em}
+\begin{center}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.95\linewidth}{\centering\scriptsize
+\textbf{Algorithms 1 and 2 are unchanged from the paper.}\\
+Only the \emph{functions} used for path computation were replaced.}}
+\end{center}
+\end{columns}
+\end{frame}
+
+% ============================================================
+% SLIDE 9: Engineering ④ --- Multiprocessing + RNG separation
+% ============================================================
+\begin{frame}[t]{Engineering \textcircled{\scriptsize 4}: Parallelism + independent RNG streams}
+\footnotesize
+
+\begin{columns}[T,onlytextwidth]
+\column{0.46\textwidth}
+\begin{block}{\small 8-worker parallelism}
+\scriptsize
+\texttt{multiprocessing.Pool(8)} across seed $\times$ config grid.\\[3pt]
+Network built once in the parent; workers share it via fork copy-on-write.\\[3pt]
+Each worker's run is independent $\Rightarrow \sim 8\times$ extra throughput.
+\end{block}
+
+\vspace{0.4em}
+\begin{alertblock}{\small Why RNG separation matters}
+\scriptsize
+If a single RNG drives humans + hazards + sim dynamics, changing $P_{\max}$ alters the hazard placements \emph{for free}.\\
+$\Rightarrow$ Can't tell whether a higher RI is from more people or from different hazards.
+\end{alertblock}
+
+\column{0.50\textwidth}
+\begin{center}
+\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.85, transform shape]
+  \node[panelbox, fill=lightbluefill, minimum width=5cm, minimum height=0.8cm, align=center] (hu) at (0, 2.5)
+    {Human stream --- \texttt{seed}\\ {\scriptsize origins, destinations, groups}};
+  \node[panelbox, fill=lightredfill, minimum width=5cm, minimum height=0.8cm, align=center] (hz) at (0, 1.0)
+    {Hazard stream --- \texttt{seed+1000}\\ {\scriptsize centers, types, times}};
+  \node[panelbox, fill=lightgreenfill, minimum width=5cm, minimum height=0.8cm, align=center] (sim) at (0, -0.5)
+    {Sim stream --- \texttt{seed+2000}\\ {\scriptsize casualty rolls, panic rolls, random edges}};
+  \node[below=0.3em of sim, font=\scriptsize, align=center, text width=5.5cm]
+    {Hazard stream is \keyterm{fixed} within each config\\ across all seeds $\to$ same scenario,\\ only agent variation.};
+\end{tikzpicture}
+\end{center}
+\end{columns}
+\end{frame}
+
 \end{document}
