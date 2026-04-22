@@ -1,0 +1,25 @@
+{
+  "mode": "naive",
+  "wall_sec": 168.02,
+  "timings": {
+    "flows": 0.957,
+    "algo2": 0.774,
+    "batch_sssp": 0.004,
+    "algo1": 165.874,
+    "commit": 0.369,
+    "total": 167.978
+  },
+  "metrics": {
+    "RI": 0.363,
+    "RS": 0.9022038567493113,
+    "RC": 0.03168044077134986,
+    "RL": 0.06611570247933884
+  },
+  "config": {
+    "Pmax": 2000,
+    "Hmax": 5,
+    "epsilon_p": 0.1,
+    "seed": 42,
+    "community": "PSU-UP"
+  }
+}
