@@ -959,4 +959,121 @@ Enabled full multi-seed reproduction + 3 extensions without cutting corners on t
 \end{center}
 \end{frame}
 
+% ============================================================
+% APPENDIX (backup slides)
+% ============================================================
+\appendix
+
+% ============================================================
+% BACKUP 27: Multi-community Pmax extension
+% ============================================================
+\begin{frame}[t]{Backup: Does the $P_{\max}$ breakpoint generalize?}
+\footnotesize
+
+\begin{center}
+{\scriptsize
+\begin{tabular}{lccccc}
+\toprule
+Community & Buildings & Capacity@20 & Breakpoint onset & Mechanism \\
+\midrule
+PSU-UP & 969 & 19{,}380 & $\sim$50K & outdoor queuing \\
+KOP-PA & 277 & 5{,}540 & to be verified & same \\
+RA-PA  & 473 & 9{,}460 & to be verified & same \\
+VT-B   & 448 & 8{,}960 & to be verified & same \\
+UVA-C  & 412 & 8{,}240 & to be verified & same \\
+\bottomrule
+\end{tabular}}
+\end{center}
+
+\vspace{0.6em}
+{\scriptsize Multi-community Pmax sweep data is in \texttt{results/pmax\_extension/\{community\}/combined.json}.
+Breakpoint should correlate with building capacity; PSU-UP exhibits it at $\sim$2.5$\times$ capacity ($\sim$51 agents/building). Primary finding (breakpoint exists) demonstrated on PSU-UP.}
+\end{frame}
+
+% ============================================================
+% BACKUP 28: Edge count anomaly diagnostic
+% ============================================================
+\begin{frame}[t]{Backup: Edge count anomaly for RA-PA, KOP-PA}
+\footnotesize
+
+\textbf{Paper's E/N ratios (2021 Table V):} RA-PA 6.47, KOP-PA 6.84. Other communities 1.0--2.6.
+
+\begin{center}
+{\scriptsize
+\begin{tabular}{lcc}
+\toprule
+Method tested & Our edges (RA-PA) & Fraction of paper \\
+\midrule
+walk network + simplify & 7{,}136 & 43\% \\
+network\_type="all" & 6{,}750 & 41\% \\
+simplify=False (all waypoints) & 66{,}836 & 407\% \\
+Geometry segment count & 12{,}030 & \textbf{73\%} \\
+Edge subdivision, 20m & $\sim$18{,}966 & 115\% \\
+\bottomrule
+\end{tabular}}
+\end{center}
+
+\vspace{0.4em}
+\textbf{Conclusion:} No standard OSMnx config produces the paper's edge counts for these two communities. Closest hypothesis is geometry-segment counting (73\%). Treated as a paper data anomaly rather than a reproduction failure.
+\end{frame}
+
+% ============================================================
+% BACKUP 29: Why not more extensions?
+% ============================================================
+\begin{frame}[t]{Backup: Extension candidates considered}
+\footnotesize
+
+We drafted 6 extension candidates. Selected the 3 already presented. Remaining ideas were scoped out:
+
+\vspace{0.4em}
+{\scriptsize
+\begin{tabular}{p{4.5cm}p{9cm}}
+\toprule
+Candidate & Status \\
+\midrule
+A1: Panic-dependent casualty & Deferred --- addresses the $RC$ ceiling gap at high panic; requires new casualty formula and re-running Phase 2b \\
+A2: Demographic-specific shelter preference & Deferred --- low expected effect on headline metrics \\
+B1: Shelter-location sensitivity study & Partially done (see slide 16) --- extended sweep would strengthen it \\
+C1: Response agents (firefighters, volunteers) & Deferred --- requires new agent class; high implementation cost \\
+C2: Social-force movement model & Deferred --- replaces the whole movement layer \\
+C3: MDP panic model & Deferred --- replaces the panic trigger; out of scope for a course project \\
+\bottomrule
+\end{tabular}}
+
+\vspace{0.4em}
+{\scriptsize\textcolor{gray}{Full write-up: \texttt{Extension\_Candidates\_Detailed.md}.}}
+\end{frame}
+
+% ============================================================
+% BACKUP 30: Static snapshot strips (animation fallback)
+% ============================================================
+\begin{frame}[t]{Backup: Static snapshots (animation fallback)}
+\footnotesize
+
+\begin{center}
+{\scriptsize If animations do not play in the venue PDF viewer, static frames are embedded here.}
+\end{center}
+
+\vspace{0.3em}
+\textbf{E} --- PSU-UP baseline
+\begin{center}
+\includegraphics[width=0.14\linewidth]{assets/frames_psuup/sim_000.png}\hfill
+\includegraphics[width=0.14\linewidth]{assets/frames_psuup/sim_015.png}\hfill
+\includegraphics[width=0.14\linewidth]{assets/frames_psuup/sim_030.png}\hfill
+\includegraphics[width=0.14\linewidth]{assets/frames_psuup/sim_045.png}\hfill
+\includegraphics[width=0.14\linewidth]{assets/frames_psuup/sim_060.png}
+\end{center}
+
+\vspace{0.2em}
+\textbf{$\alpha$} --- Pmax 2K vs 50K
+\begin{center}
+\includegraphics[width=0.30\linewidth]{assets/frames_cmp_pmax/cmp_000.png}\hfill
+\includegraphics[width=0.30\linewidth]{assets/frames_cmp_pmax/cmp_030.png}\hfill
+\includegraphics[width=0.30\linewidth]{assets/frames_cmp_pmax/cmp_060.png}
+\end{center}
+
+\vspace{0.2em}
+{\scriptsize $\beta$ and $\gamma$ snapshot strips analogous. Reach via Slide navigation.}
+\end{frame}
+
 \end{document}
