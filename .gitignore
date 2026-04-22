@@ -15,3 +15,11 @@ trash/
 
 # Internal docs
 HANDOFF.md
+HANDOFF_DETAILED.md
+CROSSCHECK_FOR_GPT.md
+
+# Generated animation frames
+presentation/assets/frames_psuup/
+presentation/assets/frames_cmp_pmax/
+presentation/assets/frames_cmp_panic/
+presentation/assets/frames_cmp_hmax/
