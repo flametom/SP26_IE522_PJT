@@ -40,7 +40,7 @@ from config import (
 class EvacuationSimulation:
 
     def __init__(self, G, humans, hazards, shelter_nodes,
-                 background_panic, rng):
+                 background_panic, rng, use_batch_sssp=True):
         self.G = G
         self.humans = humans
         self.hazards = hazards
@@ -48,6 +48,13 @@ class EvacuationSimulation:
         self.background_panic = background_panic
         self.rng = rng
         self.dt = DT
+        self.use_batch_sssp = use_batch_sssp     # NEW
+
+        # Timing instrumentation (populated by run())
+        self.timings = {
+            "flows": 0.0, "algo2": 0.0, "batch_sssp": 0.0,
+            "algo1": 0.0, "commit": 0.0, "total": 0.0,
+        }
 
         self.G_undirected = G.to_undirected()
         self.coords = {n: (d["x"], d["y"]) for n, d in G.nodes(data=True)}
@@ -163,6 +170,9 @@ class EvacuationSimulation:
     def _batch_compute_paths(self):
         """Pre-compute shortest-path trees for active agents' destinations.
         Called once per step; results are looked up in _find_path_batch."""
+        if not self.use_batch_sssp:
+            self._batch_preds = {}
+            return
         dest_set = set()
         for p in self.humans:
             if not p.is_active:
@@ -247,6 +257,7 @@ class EvacuationSimulation:
     # ══════════════════════════════════════════════════════════════════════
 
     def run(self, verbose=True):
+        import time
         for step in range(N_STEPS + 1):
             t_min = step * self.dt
 
@@ -257,16 +268,29 @@ class EvacuationSimulation:
                 if not p.departed and t_min >= p.departure_time:
                     p.departed = True
 
+            t0 = time.time()
             self._reset_flows()
             self._compute_flows()
+            self.timings["flows"] += time.time() - t0
 
             for p in self.humans:
                 p.clear_buffers()
 
+            t0 = time.time()
             self._algorithm2()
+            self.timings["algo2"] += time.time() - t0
+
+            t0 = time.time()
             self._batch_compute_paths()
+            self.timings["batch_sssp"] += time.time() - t0
+
+            t0 = time.time()
             self._algorithm1()
+            self.timings["algo1"] += time.time() - t0
+
+            t0 = time.time()
             self._commit_updates()
+            self.timings["commit"] += time.time() - t0
 
             if step in self._snapshot_steps:
                 self._record(t_min)
@@ -277,6 +301,9 @@ class EvacuationSimulation:
         if N_STEPS not in self._snapshot_steps:
             self._record(SIM_DURATION)
 
+        self.timings["total"] = sum(
+            v for k, v in self.timings.items() if k != "total"
+        )
         return self._compute_metrics()
 
     # ══════════════════════════════════════════════════════════════════════
