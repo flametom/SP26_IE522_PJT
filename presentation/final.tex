@@ -198,4 +198,51 @@ Panic is \keyterm{irreversible}; impacted agents reroute to nearest shelter.
 \end{columns}
 \end{frame}
 
+% ============================================================
+% SLIDE 5: Why speed matters
+% ============================================================
+\begin{frame}[t]{Why speed matters: 390 runs, thousands of agents each}
+\footnotesize
+
+\begin{columns}[T,onlytextwidth]
+\column{0.50\textwidth}
+\textbf{Per single run} (Pmax = 2{,}000, 121 steps):
+\vspace{0.3em}
+\begin{itemize}\itemsep0.25em
+  \item $\sim 2{,}000$ active agents
+  \item $121$ time steps
+  \item Each non-panicked agent recomputes its path \keyterm{every step}\\
+        {\scriptsize (paper spec: ``pedestrians rely on up-to-date observations'')}
+  \item $\Rightarrow \sim 200{,}000$+ shortest-path calls per run
+\end{itemize}
+
+\vspace{0.4em}
+\textbf{Across our full experiment:}
+\vspace{0.3em}
+\begin{itemize}\itemsep0.25em
+  \item Paper reproduction: 14 configs $\times$ 10 seeds $=$ 140 runs
+  \item Extensions: $\sim 250$ additional runs
+  \item \textbf{Total: $\sim 390$ runs}
+\end{itemize}
+
+\column{0.46\textwidth}
+\vspace{0.1em}
+\begin{alertblock}{\small With a naïve implementation}
+\scriptsize
+Per-agent \texttt{nx.astar\_path} in pure Python.\\[3pt]
+1 run $\approx$ 5--15 minutes (measured).\\[3pt]
+$\Rightarrow$ 390 runs $\approx$ \textbf{1.5--4 days} of wall time.
+\end{alertblock}
+
+\vspace{0.4em}
+\begin{block}{\small With our optimized pipeline}
+\scriptsize
+Same Algorithms 1, 2.\\
+Different \emph{functions} for path computation.\\[3pt]
+1 run $\approx$ 32 seconds.\\[3pt]
+390 runs $\approx$ \textbf{3.4 hours} (8 workers).
+\end{block}
+\end{columns}
+\end{frame}
+
 \end{document}
