@@ -96,3 +96,12 @@ CASUALTY_CENTER_WEIGHT = 2.0      # higher near center
 # ── Visualization ───────────────────────────────────────────────────────────
 FIG_DPI = 150
 SNAPSHOT_TIMES = [0, 30, 60, 90, 120]
+
+# For animation rendering, override SNAPSHOT_TIMES to capture every N steps.
+# Set via environment variable ANIMATION_STRIDE (int, 1=every step) before
+# importing config. When set, SNAPSHOT_TIMES becomes [0, N, 2N, ..., 120].
+import os as _os
+_stride = _os.environ.get("ANIMATION_STRIDE")
+if _stride is not None:
+    _s = int(_stride)
+    SNAPSHOT_TIMES = list(range(0, SIM_DURATION + 1, _s))
