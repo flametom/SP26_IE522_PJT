@@ -827,4 +827,92 @@ $\Rightarrow$ Panic management has highest impact at \emph{low-baseline} states.
 \end{columns}
 \end{frame}
 
+% ============================================================
+% SLIDE 24: Conclusion (appended now; will appear after slides 21-23 once T22 inserts them)
+% ============================================================
+\begin{frame}[t]{Summary}
+\footnotesize
+
+\begin{columns}[T,onlytextwidth]
+\column{0.48\textwidth}
+\begin{block}{\small Reproduction}
+\scriptsize
+\begin{itemize}\itemsep0.2em
+  \item Building counts: \textbf{100--102\%} across 5 communities
+  \item $RI$ within \textbf{2--4\%p} of paper across all 9 configs
+  \item $RS$/$RC$/$RL$ trends fully reproduced
+  \item Core finding confirmed:\\ \keyterm{$RI \sim P_{\max}$ independence}
+\end{itemize}
+\end{block}
+
+\column{0.48\textwidth}
+\begin{alertblock}{\small Novel findings (beyond paper)}
+\scriptsize
+\begin{itemize}\itemsep0.2em
+  \item \textcircled{\scriptsize 1} $P_{\max}$ independence \textbf{breaks at 50K} (population exceeds building capacity)
+  \item \textcircled{\scriptsize 2} $RI$ \textbf{saturates at $\sim$86\%} as $H_{\max}$ grows (topology ceiling)
+  \item \textcircled{\scriptsize 3} $\varepsilon_p$ effect is \textbf{smooth with diminishing returns}
+\end{itemize}
+\end{alertblock}
+\end{columns}
+
+\vspace{0.6em}
+\begin{center}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\footnotesize
+\textbf{Engineering}: 7.5$\times$ single-process speedup (scipy batch SSSP), $\times$8 parallel $\Rightarrow$ 390 runs in a few hours.\\
+Enabled full multi-seed reproduction + 3 extensions without cutting corners on the paper's model.}}
+\end{center}
+\end{frame}
+
+% ============================================================
+% SLIDE 25: Future work
+% ============================================================
+\begin{frame}[t]{Future work}
+\footnotesize
+
+\begin{columns}[T,onlytextwidth]
+\column{0.5\textwidth}
+\begin{block}{\small From the paper's own discussion}
+\scriptsize
+\begin{itemize}\itemsep0.2em
+  \item \textbf{Response agents}: firefighters, volunteers coordinating evacuation
+  \item \textbf{Social-force models}: physics-based crowd dynamics
+  \item \textbf{MDP panic model}: probabilistic irrationality triggered by evolving hazards
+\end{itemize}
+\end{block}
+
+\column{0.46\textwidth}
+\begin{alertblock}{\small From our own gap analysis}
+\scriptsize
+\begin{itemize}\itemsep0.2em
+  \item \textbf{Panic-dependent casualty}: current model uses distance only; extending to $p_{\text{cas}} \propto \varepsilon_p$ could close the $RC$ ceiling gap at high panic
+  \item \textbf{Shelter-location sensitivity}: apply the 62\% fitting method across broader community types
+\end{itemize}
+\end{alertblock}
+\end{columns}
+\end{frame}
+
+% ============================================================
+% SLIDE 26: References
+% ============================================================
+\begin{frame}[t]{References \& acknowledgements}
+\footnotesize
+
+\begin{itemize}\itemsep0.4em
+  \item Shi, Lee, Yang. \textbf{Multi-agent Modeling of Human Traffic Dynamics for Rapid Response to Public Emergency in Spatial Networks}. IEEE CASE 2024.
+  \item Zhang, Yang. \textbf{Agent-based Modeling of Pedestrian Dynamics}. IEEE EMBC 2021.\\
+        {\scriptsize (Used to disambiguate preprocessing choices not stated in the CASE paper.)}
+  \item Boeing, G. \textbf{OSMnx}. Python package for street-network analysis.
+  \item Virtanen et al. \textbf{SciPy} (batch Dijkstra via \texttt{scipy.sparse.csgraph}).
+  \item OpenStreetMap contributors. \textbf{OpenStreetMap}. \url{openstreetmap.org}
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.8\linewidth}{\centering\small
+\textbf{Thank you.} \\[3pt]
+{\scriptsize Questions? Code and data: \texttt{github.com/flametom/IE522\_PJT}}}}
+\end{center}
+\end{frame}
+
 \end{document}
