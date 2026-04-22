@@ -1,203 +1,183 @@
-\documentclass[11pt, a4paper]{article}
-\usepackage[margin=2.2cm]{geometry}
+\documentclass[11pt]{article}
+\usepackage[margin=0.9in]{geometry}
+\usepackage{amsmath}
 \usepackage{enumitem}
 \usepackage{xcolor}
-\usepackage{titlesec}
-\usepackage{booktabs}
-\usepackage{amsmath}
+\setlist[itemize]{leftmargin=*,itemsep=0.2em}
+\newcommand{\slide}[2]{\vspace{0.6em}\noindent\textbf{Slide #1.\ #2}\par\nopagebreak\vspace{0.1em}}
 
-% Colors matching the slides
-\definecolor{slideblue}{HTML}{0055A8}
-\definecolor{slidered}{HTML}{E37222}
-\definecolor{slidegray}{HTML}{666666}
-
-\titleformat{\section}{\large\bfseries\color{slideblue}}{Slide \thesection:~}{0pt}{}
-\titleformat{\subsection}{\small\bfseries\color{slidered}}{}{0pt}{}
-\setlist[itemize]{leftmargin=1.2em, itemsep=2pt}
-
-\newcommand{\timing}[1]{\hfill{\small\color{slidegray}[\,#1\,]}}
-\newcommand{\note}[1]{{\small\color{slidegray}\textit{#1}}}
-\newcommand{\transition}[1]{\vspace{0.3em}\noindent\textcolor{slidered}{$\blacktriangleright$~\textit{#1}}\vspace{0.3em}}
-
-\title{\textcolor{slideblue}{Presentation Script}\\[6pt]
-\large Multi-Agent Modeling of Human Traffic Dynamics\\
-for Rapid Response to Public Emergency in Spatial Networks\\[6pt]
-\normalsize IE 522 --- Simulation ~|~ Penn State University ~|~ Spring 2026}
-\author{Dalal Alboloushi \quad \& \quad Jeongwon Bae}
-\date{}
+\title{Final Presentation --- Speaker Notes}
+\author{Jeongwon Bae}
+\date{IE 522, Spring 2026}
 
 \begin{document}
 \maketitle
-\vspace{-1em}
-\noindent\rule{\textwidth}{0.5pt}
-\begin{center}
-\small Total time: $\sim$10 minutes ~|~ 9 slides ~|~ Target audience: IE 522 students (DES background)
-\end{center}
-\noindent\rule{\textwidth}{0.5pt}
 
-% ============================================================
-\section{Title} \timing{30 sec}
-
-Good morning everyone. Today we'll present our project on simulating emergency evacuation using agent-based modeling. This work is based on a 2024 IEEE CASE paper by Shi, Lee, and Yang, which proposes a multi-agent model for simulating how pedestrians move through spatial networks during public emergencies.
-
-\transition{Let's start with why this problem is interesting.}
-
-% ============================================================
-\section{Problem: Simulating Emergency Evacuation} \timing{1 min 30 sec}
-
-Imagine a hazard---a fire, an explosion, or a flood---strikes a community like our campus. Thousands of people need to evacuate at the same time. Why is this hard to simulate?
-
+\slide{1}{Title}
 \begin{itemize}
-  \item First, each person decides \textbf{independently}. Everyone has their own destination, their own speed, and their own understanding of what's happening around them.
-  \item Their decisions depend on \textbf{local information}---is this particular road congested? Am I close to the hazard? They don't have a bird's-eye view of the entire network.
-  \item \textbf{Panic} makes things worse. A panicked person doesn't follow the shortest path---they might pick a random direction, which can actually slow down the whole evacuation.
-  \item And congestion is \textbf{emergent}---it's not something you can prescribe in advance. It arises naturally when many individuals try to use the same road at the same time.
+\item Introduce: final presentation of our paper reproduction project.
+\item We reproduced Shi et al. (2024), then engineered a pipeline that let us extend beyond the paper. I'll present the reproduction first, then the engineering, then three findings that go beyond what the paper tested.
 \end{itemize}
 
-A traditional process-flow model---like the discrete event simulations we've been working with in this course---models the system from the top down. But here, the interesting behavior comes from the bottom up: from each individual's decisions. That's why this paper uses \textbf{Agent-Based Simulation}, where each pedestrian is modeled as an autonomous agent with its own state, position, speed, and decision logic.
-
-\transition{So what does this model actually look like?}
-
-% ============================================================
-\section{Model Overview --- Three Components} \timing{1 min}
-
-The model has three main components that interact with each other.
-
+\slide{2}{Recap: Problem and model}
 \begin{itemize}
-  \item The \textbf{Community Network}---a graph $G = (V, E)$ built from OpenStreetMap data. The nodes are buildings, intersections, and shelters. The edges are roads, each with a capacity that determines how many pedestrians it can hold.
-
-  \item \textbf{Human Agents}---the pedestrians. Each one has 6 possible behavioral states, from Normal all the way to Casualty. They belong to one of three demographic groups with different speeds and panic susceptibilities.
-
-  \item \textbf{Hazard Agents}---the emergencies. These are circular impact zones that expand and move over time.
+\item As shown in the midterm, this paper models emergency evacuation using three components: the community network built from OpenStreetMap, human agents with six states, and hazard agents that expand and move.
+\item Since you've seen the model in the midterm, I'll move quickly.
 \end{itemize}
 
-These three components interact through two algorithms: Algorithm~1 handles how humans interact with the network---routing, congestion, queuing. Algorithm~2 handles how humans interact with hazards---impact detection, casualty, and panic.
-
-\transition{Let me walk through each component in more detail, starting with the network.}
-
-% ============================================================
-\section{Spatial Network --- What Does It Represent?} \timing{1 min}
-
-On the left you can see the actual walk network for Penn State University Park, downloaded from OpenStreetMap using OSMnx. It has about 9,000 nodes and 23,000 directed edges.
-
-The key idea is simple: the network represents the physical environment. Nodes are places---buildings where people start, intersections where they make routing decisions, and shelters where they can find safety. Edges are the roads connecting them.
-
-Each edge has two important properties:
+\slide{3}{Recap: Algorithms 1 and 2}
 \begin{itemize}
-  \item \textbf{Length}---the physical distance in meters.
-  \item \textbf{Capacity}---how many pedestrians the road can hold simultaneously, calculated as length times a density factor $D_{\max}$ that depends on the road type. A narrow footway has $D_{\max} = 3$ pedestrians per meter, while a wide pedestrian zone might have 8.
+\item Each step, every agent runs both Algorithm 2 (human--hazard) and Algorithm 1 (human--network). Both are from the paper, unchanged in our implementation.
 \end{itemize}
 
-When the number of agents on a road exceeds its capacity, that road becomes congested, and agents have to either queue or find an alternative route. This is how bottlenecks naturally emerge in the simulation.
-
-\transition{Now let's look at the human agents---the pedestrians.}
-
-% ============================================================
-\section{Human Agents --- Parameters \& Their Roles} \timing{1 min 30 sec}
-
-Each human agent is defined by five core parameters.
-
-\textbf{Position} tells us where the agent currently is---either at a node or partway along an edge. \textbf{Destination} is where they're trying to go---initially a random building, but if they get hit by a hazard, their destination switches to the nearest shelter. \textbf{Speed} determines how fast they walk, ranging from 72 to 96 meters per minute depending on their age group. \textbf{State} is their current behavioral mode---one of six possible states. And \textbf{panic rate} $\varepsilon_p$ controls the probability that they'll start behaving irrationally.
-
-On the right you can see the state transition diagram. An agent starts as \textit{Normal}. If the road is full, they become \textit{Queuing}. If they enter a hazard zone, they become \textit{Impacted} and reroute to the nearest shelter. From Impacted, they can either reach the shelter (\textit{Survival}), or if they stay in the hazard zone too long, they might become a \textit{Casualty}. If they reach their original destination without any hazard encounter, they're marked as \textit{Arrival}.
-
-The key behavioral distinction is between normal and panicked agents. A \textbf{normal agent} recomputes the shortest path to their destination every single time step. A \textbf{panicked agent} just picks a random edge at every node---they've lost the ability to plan rationally. And once an agent becomes panicked, it's irreversible.
-
-\transition{Next, the hazard agents.}
-
-% ============================================================
-\section{Hazard Agents --- How Danger Spreads} \timing{1 min}
-
-Each hazard is defined by its center location, an initial radius, an expansion speed, a movement speed, a direction, and a lifespan.
-
-The lifecycle is straightforward: the hazard \textbf{emerges} at some point during the simulation, then its radius \textbf{expands} and its center \textbf{moves} in a given direction each time step. After its lifespan expires, the hazard disappears.
-
-What happens to agents inside the zone? Three things:
-\begin{enumerate}[itemsep=2pt]
-  \item On first contact, their state changes to \textit{Impacted} and their destination switches to the nearest shelter.
-  \item Every step they remain inside, there's a probability of becoming a \textit{Casualty}---and that probability is higher the closer they are to the center.
-  \item Every step inside, there's also a probability of \textit{panic}, which is irreversible and causes them to switch from rational to random routing.
-\end{enumerate}
-
-Multiple hazards can occur during a single simulation, controlled by the parameter $H_{\max}$.
-
-\transition{Now let's see how all of this comes together in each time step.}
-
-% ============================================================
-\section{How It Works --- One Agent's Perspective} \timing{1 min}
-
-Rather than showing you a flowchart, let me walk through what happens from one agent's perspective during a single time step.
-
-Every minute of simulated time, each agent goes through two checks.
-
-\textbf{Step 1: ``Am I in danger?''} --- This is Algorithm 2. The agent checks whether their current position falls inside any active hazard zone. If yes, and it's their first time being hit, they become Impacted and reroute to the nearest shelter. Every step they remain inside, they roll for casualty and for panic.
-
-\textbf{Step 2: ``Where do I go?''} --- This is Algorithm 1. First, check if they've arrived at their destination---if so, they're done (Arrival or Survival). If not, check if the road ahead is full---if all outgoing edges are congested, they have to queue. Otherwise, they decide their route: a normal agent recomputes the shortest path using A*, while a panicked agent just picks a random direction.
-
-One important detail: all agents make their decisions based on the \textbf{same snapshot} of the world. We don't update positions one agent at a time---all decisions are buffered, and then all positions update simultaneously at the end of the step. This prevents any agent from having an unfair advantage based on processing order.
-
-\transition{Let me show you this in action with a small demo.}
-
-% ============================================================
-\section{Toy Example --- Simulation in Action} \timing{1 min 30 sec}
-
-\note{[Click play on the animation in Adobe Reader]}
-
-This is a small toy network with 17 nodes---4 buildings, 3 shelters, and 10 intersection nodes. We have 10 agents starting from the buildings.
-
-At $t = 0$, everything is normal. The blue dots are agents walking toward their random destinations.
-
-At $t = 4$, the hazard appears---you can see the semi-transparent red circle. Agents inside the zone immediately turn red---they're Impacted---and they start heading toward the shelters at the bottom.
-
-Between $t = 10$ and $t = 25$, you can see several things happening at once:
+\slide{4}{Reproduction scope}
 \begin{itemize}
-  \item The hazard zone keeps expanding and shifting.
-  \item Some agents become casualties---the X marks.
-  \item You might see yellow dots---those are agents in \textit{Queuing} state, stuck because the edge they want to use is full.
-  \item The exclamation marks show panicked agents walking in random directions.
-  \item Green dots on the shelters are agents who made it to safety---Survival.
+\item We reproduced all three phases: 5-community network validation, Fig.\ 5 RI vs $P_\text{max} \times H_\text{max}$, and Fig.\ 6 panic sweep.
+\item Then three extensions --- I'll cover those after the reproduction results.
 \end{itemize}
 
-At $t = 34$, the hazard's lifespan expires and the zone disappears. The remaining agents continue to safety.
-
-This toy example implements all the mechanisms from the paper---simultaneous update, congestion-based queuing, panic behavior, casualty probability, and hazard lifecycle with lifespan.
-
-\transition{Finally, where we are and where we're going.}
-
-% ============================================================
-\section{Current Status \& Project Direction} \timing{1 min 30 sec}
-
-So far, we have completed the paper analysis and model understanding, and we've built the base implementation---the network construction from OSMnx, the agent and hazard classes, and both Algorithm 1 and Algorithm 2. We also built this toy simulator that demonstrates all six states, congestion, panic, and simultaneous update.
-
-What's \textbf{pending} is the validation---comparing our simulation results quantitatively against the paper's published results.
-
-\subsection{Reproduction targets}
-
-We plan to reproduce three key results:
+\slide{5}{Why speed matters}
 \begin{itemize}
-  \item \textbf{Table V}: Verify the network structure---Buildings, Non-building nodes, and Edges---for 5 communities: Penn State University Park, UVA Charlottesville, Virginia Tech, Reading PA, and King of Prussia PA. We'll build the same walk networks from OpenStreetMap and compare the counts.
-  \item \textbf{Figure 5}: the Impacted Rate under different combinations of maximum pedestrian flow $P_{\max}$ and number of hazard events $H_{\max}$---that's a $3 \times 3$ grid with $P_{\max} \in \{2000, 5000, 8000\}$ and $H_{\max} \in \{5, 10, 15\}$.
-  \item \textbf{Figure 6}: the Survival Rate, Casualty Rate, and Leftover Rate as a function of the panic rate $\varepsilon_p$, from 10\% to 90\%.
+\item A naive implementation takes about 3 minutes per single run at Pmax=2K. With 390 runs across extensions, that's on the order of hours-to-days depending on parallelism.
+\item Our optimized pipeline: ~22 seconds per run, a few hours total for the whole sweep.
+\item Critically: we did NOT change the algorithm. Just the functions used for path computation.
 \end{itemize}
 
-That's 45 parameter combinations total, each run with multiple random seeds for statistical reliability.
-
-\subsection{Future work}
-
-The paper's discussion also suggests several directions for future work, which we find promising:
+\slide{6}{Engineering 1: Profiling}
 \begin{itemize}
-  \item \textbf{Additional agent types}: right now the model only has pedestrians and hazards. The authors suggest adding firefighters and trained volunteers as new agent types, so you'd have organized response happening alongside the civilian evacuation.
-  \item \textbf{Social force models}: the current panic behavior is binary---you're either rational or random. Social force models from crowd dynamics could make this more realistic, with physical forces like attraction and repulsion between agents.
-  \item \textbf{Markov Decision Processes}: instead of a simple probability check for panic, MDP-based modeling could capture how irrational decisions evolve as hazard conditions change over time.
+\item The bar chart shows where time goes in a single run. The hot loop --- Algorithm 1 path recomputation --- dominates the naive case.
+\item Root cause: every non-panicked agent calls networkx A* in pure Python every step.
 \end{itemize}
 
-These are directions the authors themselves identified, and they align well with what we've seen during our implementation. That's our plan. Thank you.
+\slide{7}{Engineering 2: scipy batch SSSP}
+\begin{itemize}
+\item Key insight: many agents share destinations (buildings, shelters). Compute one shortest-path tree per unique destination, reuse.
+\item This converts per-agent work into per-destination work. Scipy's Dijkstra is in C, much faster than networkx in Python.
+\item Measured: the Algorithm 1 section alone goes 230x faster. End-to-end including the batch SSSP overhead: 7.5x single-process.
+\end{itemize}
 
-\vspace{1.5em}
-\noindent\rule{\textwidth}{0.5pt}
-\begin{center}
-\small\color{slidegray}
-End of script ~|~ Total estimated time: $\sim$10 minutes
-\end{center}
+\slide{8}{Engineering 3: A* heuristic + per-step recomputation}
+\begin{itemize}
+\item For single-source fallbacks (shelter redirect), we use A* with Euclidean heuristic --- faster than plain Dijkstra on spatial graphs.
+\item Per-step recomputation is kept, per the paper's spec.
+\item Panicked agents get noisy edge weights to model ``limited observations'' from the paper.
+\item Bottom line box: algorithms unchanged, functions replaced.
+\end{itemize}
+
+\slide{9}{Engineering 4: Multiprocessing + RNG separation}
+\begin{itemize}
+\item 8 workers across configs --- 8x extra throughput. Network built once, shared via fork copy-on-write.
+\item RNG separation is subtler but critical: 3 independent streams for humans, hazards, sim dynamics. Without it, changing Pmax changes the hazards too --- apples-to-oranges.
+\end{itemize}
+
+\slide{10}{Engineering 5: Benchmark}
+\begin{itemize}
+\item We ran a head-to-head: naive Pmax=2K run vs optimized.
+\item 7.5x single-process, 60x with 8 workers.
+\item What this enabled: 10 seeds per config, 5 communities, three extensions --- without taking shortcuts.
+\end{itemize}
+
+\slide{11}{E: PSU-UP animation}
+\begin{itemize}
+\item This replaces the toy animation from the midterm.
+\item Configuration: paper's baseline (Pmax=2K, Hmax=5, epsilon\_p=10\%).
+\item Watch: hazard appears, impacted agents reroute to shelter, some are casualties, the rest arrive.
+\item Outcome corresponds to RI $\approx$ 36\% which we'll see on slide 14.
+\end{itemize}
+
+\slide{12}{Phase 1: Network validation}
+\begin{itemize}
+\item Building counts match the paper's Table V within 0--2\% across all 5 communities.
+\item Edge counts: PSU-UP, UVA-C, VT-B are close. RA-PA and KOP-PA are way off --- paper reports E/N ratios of 6.5--6.8, unreproducible with any OSMnx config. Treated as a paper data anomaly.
+\end{itemize}
+
+\slide{13}{Phase 1: PSU-UP figures}
+\begin{itemize}
+\item Fig.\ 3 reproduction: walk network with buildings in yellow, shelters in green.
+\item Fig.\ 4 reproduction: pedestrian flow snapshots at five timesteps during a hazard scenario.
+\end{itemize}
+
+\slide{14}{Phase 2a: RI vs Pmax x Hmax}
+\begin{itemize}
+\item Fig.\ 5 reproduction. Our RI is 2--4\%p higher than paper uniformly.
+\item Critical confirmation: RI is independent of Pmax across 2K--8K ($\Delta < 0.2$\%p). This is the paper's core finding, and we reproduced it.
+\end{itemize}
+
+\slide{15}{Phase 2b: RS/RC/RL vs epsilon\_p}
+\begin{itemize}
+\item Fig.\ 6 reproduction with 9 epsilon\_p points instead of 5.
+\item All three monotonic trends reproduced. Near-exact match at boundary points.
+\item Paper's main conclusion holds: panic is the dominant driver of survival/casualty outcomes.
+\end{itemize}
+
+\slide{16}{Differences and unresolvable gaps}
+\begin{itemize}
+\item Four categories of remaining gap: all traced to unpublished paper data.
+\item Shelter list not in the paper --- we swept shelter count and found 62\% of buildings best matches RS at epsilon\_p=90\%.
+\item Casualty formula not specified --- we use a distance-weighted probability.
+\item Hazard seed not specified --- we swept 200 seeds and picked 1135.
+\end{itemize}
+
+\slide{17}{Extension overview}
+\begin{itemize}
+\item Three questions the paper didn't answer, which our fast pipeline let us tackle.
+\item Move quickly --- details on the next three slides.
+\end{itemize}
+
+\slide{18}{Extension 1: Pmax breakpoint}
+\begin{itemize}
+\item Extended Pmax from 2K to 97K across three Hmax levels.
+\item Independence holds up to 20K. Breaks at 50K by +8.5\%p.
+\item Mechanism: 969 buildings at 20 occupancy is about 20K capacity. At 50K we overflow --- agents queue outdoors and get hit by hazards.
+\end{itemize}
+
+\slide{19}{Extension 2: Hmax saturation}
+\begin{itemize}
+\item Extended Hmax from 5 to 30 at Pmax=2K.
+\item RI saturates at $\sim$86\% --- more hazards don't push past this ceiling.
+\item Likely $\sim$14\% of the network is structurally unreachable by hazards.
+\end{itemize}
+
+\slide{20}{Extension 3: Finer epsilon\_p}
+\begin{itemize}
+\item 9 points vs paper's 5.
+\item Curves are smooth, monotonic, diminishing marginal --- no phase transitions.
+\item Implication for policy: panic management has highest payoff at low baseline panic.
+\end{itemize}
+
+\slide{21}{Comparison alpha: Pmax animation}
+\begin{itemize}
+\item Same hazard scenario, different Pmax. Watch for outdoor queuing on the right.
+\end{itemize}
+
+\slide{22}{Comparison beta: epsilon\_p animation}
+\begin{itemize}
+\item Same hazard, different panic. Notice how the right panel's agents wander randomly instead of moving toward shelters.
+\end{itemize}
+
+\slide{23}{Comparison gamma: Hmax animation}
+\begin{itemize}
+\item Hazard counts differ by design --- say this explicitly. Left has 5 hazard events, right has 30.
+\item Visual takeaway: right panel has most of the network covered in red, agents hit repeatedly.
+\end{itemize}
+
+\slide{24}{Summary}
+\begin{itemize}
+\item Reproduction successful within 2--4\%p across all paper targets.
+\item Three novel findings: Pmax breakpoint, Hmax saturation, smooth panic effect.
+\item Engineering enabled all of this without algorithm changes.
+\end{itemize}
+
+\slide{25}{Future work}
+\begin{itemize}
+\item Paper's own: response agents, social-force, MDP panic model.
+\item Our own gap analysis suggests a panic-dependent casualty formula could close the RC ceiling gap.
+\end{itemize}
+
+\slide{26}{References}
+\begin{itemize}
+\item Acknowledge OSMnx, scipy. Code available on GitHub.
+\item Thank audience, invite questions.
+\end{itemize}
 
 \end{document}
