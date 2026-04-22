@@ -464,3 +464,37 @@ def render_animation_frames(history, G, out_dir, prefix="sim",
                     facecolor="white")
         plt.close(fig)
     print(f"[Viz] Rendered {len(history)} frames to {out_dir}/{prefix}_*.png")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  8. Animation frames (C: side-by-side comparison)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def render_sidebyside_frames(hist_L, hist_R, G, out_dir, prefix,
+                              label_L, label_R,
+                              building_nodes=None, shelter_nodes=None,
+                              caption=None):
+    """Render paired snapshots (L, R) as 2-panel numbered PNGs.
+    Assumes hist_L and hist_R have the same length (same SNAPSHOT_TIMES).
+    If lengths differ, pairs up to the shorter length."""
+    os.makedirs(out_dir, exist_ok=True)
+    xlo, xhi, ylo, yhi = _get_view_bounds(G)
+    bset = set(building_nodes) if building_nodes else set(
+        nd for nd in G.nodes() if G.nodes[nd].get("is_building"))
+    sset = set(shelter_nodes) if shelter_nodes else set()
+
+    n = min(len(hist_L), len(hist_R))
+    for i in range(n):
+        fig, (axL, axR) = plt.subplots(1, 2, figsize=(14, 6))
+        _render_single_frame(axL, G, hist_L[i], bset, sset,
+                              xlo, xhi, ylo, yhi, title=label_L)
+        _render_single_frame(axR, G, hist_R[i], bset, sset,
+                              xlo, xhi, ylo, yhi, title=label_R)
+        if caption:
+            fig.suptitle(caption, fontsize=9, y=0.02)
+        fname = os.path.join(out_dir, f"{prefix}_{i:03d}.png")
+        fig.savefig(fname, dpi=FIG_DPI, bbox_inches="tight",
+                    facecolor="white")
+        plt.close(fig)
+    print(f"[Viz] Rendered {n} side-by-side frames to "
+          f"{out_dir}/{prefix}_*.png")
