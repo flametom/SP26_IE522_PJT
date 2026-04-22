@@ -356,3 +356,111 @@ def plot_time_series(sim_history, community_key, tag=""):
     fig.savefig(path, dpi=FIG_DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"[Viz] Saved {path}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  7. Animation frames (E: single scenario)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _render_single_frame(ax, G, snap, bset, sset, xlo, xhi, ylo, yhi,
+                          title=None):
+    """Render one snapshot onto an existing matplotlib Axes.
+    Uses the same visual style as plot_flow_snapshots but simplified
+    (scatter only, no KDE) for speed."""
+    ax.set_facecolor("#FAFAFA")
+
+    # Edges
+    for u, v, d in G.edges(data=True):
+        if u in G.nodes and v in G.nodes:
+            x0, y0 = G.nodes[u]["x"], G.nodes[u]["y"]
+            x1, y1 = G.nodes[v]["x"], G.nodes[v]["y"]
+            ax.plot([x0, x1], [y0, y1], color="#E0E0E0",
+                    linewidth=0.25, alpha=0.5, zorder=1)
+
+    # Buildings
+    if bset:
+        bxs = [G.nodes[nd]["x"] for nd in bset if nd in G.nodes]
+        bys = [G.nodes[nd]["y"] for nd in bset if nd in G.nodes]
+        ax.scatter(bxs, bys, s=3, c="#B8860B", marker="s",
+                   alpha=0.35, zorder=2)
+
+    # Shelters
+    if sset:
+        sxs = [G.nodes[nd]["x"] for nd in sset if nd in G.nodes]
+        sys_ = [G.nodes[nd]["y"] for nd in sset if nd in G.nodes]
+        ax.scatter(sxs, sys_, s=8, c="#2D8A4E", marker="^",
+                   alpha=0.35, zorder=3)
+
+    # Hazards
+    for hz in snap.get("hazards", []):
+        cx, cy, r = hz["center"][0], hz["center"][1], hz["radius"]
+        ax.add_patch(plt.Circle((cx, cy), r,
+                     color="#FF4444", alpha=0.08, zorder=4))
+        ax.add_patch(plt.Circle((cx, cy), r, fill=False,
+                     color="#CC0000", linewidth=0.8,
+                     linestyle="--", alpha=0.5, zorder=4))
+
+    # Agents — single-color scatter per state (no KDE)
+    state_style = {
+        "NORMAL":   ("#1A56DB", 5, "o", 6),
+        "QUEUING":  ("#F5A623", 5, "D", 7),
+        "IMPACTED": ("#CC1111", 7, "o", 8),
+        "SURVIVAL": ("#1B7A3D", 4, "o", 5),
+        "ARRIVAL":  ("#3D8B37", 3, "o", 5),
+        "CASUALTY": ("#222222", 8, "X", 9),
+    }
+    by_state = {k: ([], []) for k in state_style}
+    for _, info in snap["positions"].items():
+        st = info.get("state")
+        if st not in by_state:
+            continue
+        if "x" in info and "y" in info:
+            by_state[st][0].append(info["x"])
+            by_state[st][1].append(info["y"])
+        elif info.get("node") is not None and info["node"] in G.nodes:
+            by_state[st][0].append(G.nodes[info["node"]]["x"])
+            by_state[st][1].append(G.nodes[info["node"]]["y"])
+
+    for st, (xs, ys) in by_state.items():
+        if not xs:
+            continue
+        color, sz, marker, z = state_style[st]
+        ax.scatter(xs, ys, s=sz, c=color, marker=marker,
+                   alpha=0.75, zorder=z)
+
+    ax.set_xlim(xlo, xhi)
+    ax.set_ylim(ylo, yhi)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    counts = snap.get("counts", {})
+    sub = (f"t = {int(snap['t'])} min  |  "
+           f"Active:{counts.get('active',0)}  "
+           f"Imp:{counts.get('impacted',0)}  "
+           f"Surv:{counts.get('survival',0)}  "
+           f"Cas:{counts.get('casualty',0)}")
+    if title:
+        ax.set_title(f"{title}\n{sub}", fontsize=9)
+    else:
+        ax.set_title(sub, fontsize=9)
+
+
+def render_animation_frames(history, G, out_dir, prefix="sim",
+                             building_nodes=None, shelter_nodes=None,
+                             title=None):
+    """Render each snapshot in `history` as a numbered PNG in out_dir."""
+    os.makedirs(out_dir, exist_ok=True)
+    xlo, xhi, ylo, yhi = _get_view_bounds(G)
+    bset = set(building_nodes) if building_nodes else set(
+        nd for nd in G.nodes() if G.nodes[nd].get("is_building"))
+    sset = set(shelter_nodes) if shelter_nodes else set()
+
+    for i, snap in enumerate(history):
+        fig, ax = plt.subplots(figsize=(7, 6))
+        _render_single_frame(ax, G, snap, bset, sset,
+                              xlo, xhi, ylo, yhi, title=title)
+        fname = os.path.join(out_dir, f"{prefix}_{i:03d}.png")
+        fig.savefig(fname, dpi=FIG_DPI, bbox_inches="tight",
+                    facecolor="white")
+        plt.close(fig)
+    print(f"[Viz] Rendered {len(history)} frames to {out_dir}/{prefix}_*.png")
