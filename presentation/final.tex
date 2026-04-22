@@ -423,4 +423,38 @@ $\Rightarrow$ Can't tell whether a higher RI is from more people or from differe
 \end{columns}
 \end{frame}
 
+% ============================================================
+% SLIDE 10: Engineering ⑤ --- Benchmark results
+% ============================================================
+\begin{frame}[t]{Engineering \textcircled{\scriptsize 5}: Benchmark --- na\"{i}ve vs optimized}
+\footnotesize
+
+\begin{center}
+\includegraphics[width=0.92\linewidth]{assets/benchmark_scaling.pdf}
+\end{center}
+
+\vspace{0.3em}
+\begin{columns}[T,onlytextwidth]
+\column{0.48\textwidth}
+\begin{alertblock}{\small Total speedup}
+\scriptsize
+\textbf{7.5$\times$} single-process (batch SSSP + A* heuristic)\\
+\textbf{$\times$ 8 workers $=$ $\sim$60$\times$} overall\\[4pt]
+$\Rightarrow$ 390 runs (8-worker parallel): \\ na\"{i}ve $\sim$ 2.3 h $\to$ optimized $\sim$ 18 min
+\end{alertblock}
+
+\column{0.48\textwidth}
+\begin{block}{\small What this speedup enabled}
+\scriptsize
+\begin{itemize}\itemsep0.1em
+  \item 10 seeds per config $\to$ mean $\pm$ SD throughout
+  \item Phase 1: 5 community networks
+  \item Extension Pmax 2K--97K (17 values $\times$ 3 Hmax)
+  \item Extension Hmax 5--30 (6 values)
+  \item Extension $\varepsilon_p$ 9-point finer resolution
+\end{itemize}
+\end{block}
+\end{columns}
+\end{frame}
+
 \end{document}
