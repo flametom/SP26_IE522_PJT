@@ -457,4 +457,40 @@ $\Rightarrow$ 390 runs (8-worker parallel): \\ na\"{i}ve $\sim$ 2.3 h $\to$ opti
 \end{columns}
 \end{frame}
 
+% ============================================================
+% SLIDE 11: E --- Real PSU-UP animation (replaces 1차 toy)
+% ============================================================
+\begin{frame}[t]{PSU-UP baseline in action --- real network, real agents}
+\footnotesize
+
+\begin{columns}[T,onlytextwidth]
+\column{0.65\textwidth}
+\begin{center}
+\animategraphics[controls,loop,width=0.98\linewidth]{6}{assets/frames_psuup/sim_}{000}{060}
+\end{center}
+
+\column{0.32\textwidth}
+\vspace{0.3em}
+\textbf{Configuration:}
+\scriptsize
+\begin{itemize}\itemsep0.2em
+  \item PSU-UP (969 buildings, $\sim 600$ shelters)
+  \item Pmax = 2{,}000
+  \item Hmax = 5
+  \item $\varepsilon_p = 10\%$
+  \item Hazard seed = 1135
+  \item Agent seed = 42
+\end{itemize}
+
+\vspace{0.4em}
+\textbf{Outcome:}\\
+\scriptsize
+$RI \approx 36\%$, $RS \approx 92\%$\\
+(see slides 14--15)
+\end{columns}
+
+\vspace{0.3em}
+{\scriptsize\textcolor{gray}{Colors: \textcolor{statenormal}{Normal}, \textcolor{statequeuing}{Queuing}, \textcolor{stateimpacted}{Impacted}, \textcolor{statesurvival}{Survival}, Casualty ($\times$). Red dashed = hazard.}}
+\end{frame}
+
 \end{document}
