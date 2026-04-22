@@ -493,4 +493,69 @@ $RI \approx 36\%$, $RS \approx 92\%$\\
 {\scriptsize\textcolor{gray}{Colors: \textcolor{statenormal}{Normal}, \textcolor{statequeuing}{Queuing}, \textcolor{stateimpacted}{Impacted}, \textcolor{statesurvival}{Survival}, Casualty ($\times$). Red dashed = hazard.}}
 \end{frame}
 
+% ============================================================
+% SLIDE 12: Phase 1 --- Network validation (5 communities)
+% ============================================================
+\begin{frame}[t]{Phase 1: Network validation across 5 communities}
+\footnotesize
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Community} & \textbf{Buildings (ours / paper)} & \textbf{Match} & \textbf{Walk edges (ours / paper)} & \textbf{Notes} \\
+\midrule
+PSU-UP  & 969 / 953 & \textbf{102\%} & 21{,}426 / 19{,}799 & Close \\
+UVA-C   & 412 / 412 & \textbf{100\%} & 11{,}480 / 7{,}095  & Our edges higher \\
+VT-B    & 448 / 445 & \textbf{101\%} &  8{,}214 / 6{,}929  & Close \\
+RA-PA   & 473 / 473 & \textbf{100\%} &  7{,}334 / 16{,}432 & See note$^{\dagger}$ \\
+KOP-PA  & 277 / 277 & \textbf{100\%} &  4{,}046 / 17{,}216 & See note$^{\dagger}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+\begin{columns}[T,onlytextwidth]
+\column{0.55\textwidth}
+\begin{block}{\small Building counts match within 0--2\%}
+\scriptsize
+Using \keyterm{ADD mode}: each building footprint centroid added as a separate graph node.\\
+Polygon + 25m buffer (universities), point + dist (cities).\\
+Exact matches for 3/5 communities; 1--2\% drift on PSU-UP and VT-B from OSM data evolving over time.
+\end{block}
+
+\column{0.42\textwidth}
+\begin{alertblock}{\scriptsize $^{\dagger}$ Edge count anomaly (RA-PA, KOP-PA)}
+\scriptsize
+Paper reports E/N $\approx$ 6.5--6.8 for these cities.\\
+No standard OSMnx configuration reproduces this.\\
+Closest hypothesis (geometry-segment counting) gets 73\%.\\
+See backup slide for diagnostic detail.
+\end{alertblock}
+\end{columns}
+\end{frame}
+
+% ============================================================
+% SLIDE 13: Phase 1 --- PSU-UP network + flow
+% ============================================================
+\begin{frame}[t]{Phase 1: PSU-UP spatial network \& flow snapshot}
+\footnotesize
+
+\begin{columns}[T,onlytextwidth]
+\column{0.48\textwidth}
+\begin{center}
+\includegraphics[width=0.98\linewidth]{../results/fig3_network_PSU-UP.png}\\[2pt]
+{\scriptsize Fig.\ 3 reproduction --- PSU-UP walk network}
+\end{center}
+
+\column{0.48\textwidth}
+\begin{center}
+\includegraphics[width=0.98\linewidth]{../results/fig4_flow_PSU-UP.png}\\[2pt]
+{\scriptsize Fig.\ 4 reproduction --- pedestrian flow over time}
+\end{center}
+\end{columns}
+
+\vspace{0.3em}
+{\scriptsize\textcolor{gray}{Building nodes (yellow), shelters (green $\triangle$), hazard zones (red $\bigcirc$), agent states coded by color and shape.}}
+\end{frame}
+
 \end{document}
