@@ -554,37 +554,41 @@ Answering them is the difference between reproduction at scale and a single run.
 \end{frame}
 
 % ============================================================
-% SLIDE 10: Engineering ⑤ --- Benchmark results
+% SLIDE 9: What this engineering unlocked
 % ============================================================
-\begin{frame}[t,shrink=10]{Engineering \textcircled{\scriptsize 5}: Measured speedup}
+\begin{frame}[t]{What this engineering unlocked}
 \footnotesize
 
+\begin{columns}[T,onlytextwidth]
+\column{0.50\textwidth}
 \begin{center}
-\includegraphics[width=0.80\linewidth]{assets/benchmark_scaling.pdf}
+\includegraphics[width=0.95\linewidth]{assets/benchmark_scaling.pdf}
 \end{center}
 
+\column{0.46\textwidth}
 \vspace{0.2em}
-\begin{columns}[T,onlytextwidth]
-\column{0.48\textwidth}
-\begin{alertblock}{\small Our implementation vs a na\"ive baseline}
-\scriptsize
-\textbf{7.5$\times$} single-process end-to-end\\
-\textbf{$\times$ 8 workers $=$ $\sim$60$\times$} overall\\[2pt]
-$\Rightarrow$ 390 runs (8-worker parallel): \\ na\"ive $\sim$ 2.3 h $\to$ ours $\sim$ 18 min
-\end{alertblock}
-
-\column{0.48\textwidth}
-\begin{block}{\small What this speedup enabled}
-\scriptsize
-\begin{itemize}\itemsep0.05em
-  \item 10 seeds / config $\to$ mean $\pm$ SD
-  \item Phase 1: 5 community networks
-  \item Ext.\ Pmax 2K--97K (17 $\times$ 3 Hmax)
-  \item Ext.\ Hmax 5--30 (6 values)
-  \item Ext.\ $\varepsilon_p$ 9-point finer grid
+\textbf{What the 3.4 hours bought us}
+\vspace{0.3em}
+\begin{itemize}\itemsep0.3em
+  \item \textbf{10 seeds / config}\\
+        {\scriptsize (paper: single run per cfg $\to$ mean $\pm$ SD possible)}
+  \item \textbf{Phase 1:} 5 communities validated in parallel
+  \item \textbf{Ext 1:} 17 $\times$ 3 $P_{\max}$/$H_{\max}$ grid\\
+        {\scriptsize (paper: 3 $\times$ 3 configs)}
+  \item \textbf{Ext 2:} 6-point $H_{\max}$ sweep\\
+        {\scriptsize (paper: 3 values)}
+  \item \textbf{Ext 3:} 9-point panic grid\\
+        {\scriptsize (paper: 5 values)}
+  \item \textbf{3 side-by-side animations}\\
+        {\scriptsize (paper: static figures only)}
 \end{itemize}
-\end{block}
 \end{columns}
+
+\vspace{0.5em}
+\begin{center}
+{\scriptsize\textcolor{gray}{Measured speedup: 7.5$\times$ single-process, 60$\times$ overall with 8 workers. The number is a means; the end is making 390 runs affordable.}}
+\end{center}
+
 \end{frame}
 
 % ============================================================
