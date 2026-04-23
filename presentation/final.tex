@@ -87,7 +87,7 @@
 \end{frame}
 
 % ============================================================
-% SLIDE 2: RECAP --- Problem & Motivation (from midterm)
+% SLIDE 2: RECAP --- Problem & Motivation (recap from 1st presentation)
 % ============================================================
 \begin{frame}[t,shrink=10]{Recap: Simulating Emergency Evacuation}
 \small
@@ -162,7 +162,7 @@ $\Rightarrow$ We need \textbf{Agent-Based Simulation}: model each pedestrian as 
 \vspace{0.3em}
 {\scriptsize\textcolor{gray}{Each dot = one agent making its own decision}}
 \end{columns}
-\source{Shi et al.\ (2024) --- presented at midterm}
+\source{Shi et al.\ (2024)}
 \end{frame}
 
 % ============================================================
@@ -216,7 +216,7 @@ $\Rightarrow$ We need \textbf{Agent-Based Simulation}: model each pedestrian as 
   \node[fill=lightredfill, rounded corners, draw=highlightred, font=\scriptsize\bfseries, text=highlightred] at (4.5, 1.5) {Algorithm 2: Human--Hazard};
 \end{tikzpicture}
 \end{center}
-\source{Shi et al.\ (2024), Section III --- presented at midterm}
+\source{Shi et al.\ (2024), Section III}
 \end{frame}
 
 % ============================================================
@@ -288,7 +288,7 @@ $\Rightarrow$ We need \textbf{Agent-Based Simulation}: model each pedestrian as 
 Panic is \textbf{irreversible}.}
 
 \end{columns}
-\source{Shi et al.\ (2024), Section III, Tables II--III --- presented at midterm}
+\source{Shi et al.\ (2024), Section III, Tables II--III}
 \end{frame}
 
 % ============================================================
@@ -446,7 +446,7 @@ Every non-panicked agent triggers its own shortest-path query from its current p
 \end{frame}
 
 % ============================================================
-% SLIDE 7: Engineering ② --- scipy batch SSSP
+% SLIDE 7: Engineering ② --- Shared shortest-path trees
 % ============================================================
 \begin{frame}[t,fragile,shrink=8]{Engineering \textcircled{\scriptsize 2}: Shared shortest-path trees}
 \footnotesize
@@ -510,7 +510,7 @@ Our batch trees         & $O(K)$ & $O(K \cdot (V{+}E) + V)$ \\
 \end{frame}
 
 % ============================================================
-% SLIDE 8: Engineering ③ --- A* heuristic + per-step recomputation
+% SLIDE 8: Engineering ③ --- Per-step recomputation & panic noise
 % ============================================================
 \begin{frame}[t,fragile,shrink=5]{Engineering \textcircled{\scriptsize 3}: Per-step recomputation \& panic noise}
 \footnotesize
@@ -1117,7 +1117,7 @@ Agent seed = 42 held constant.}
 \vspace{0.4em}
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\footnotesize
-\textbf{Engineering}: 7.5$\times$ single-process speedup (scipy batch SSSP), $\times$8 parallel $\Rightarrow$ 390 runs in a few hours.\\
+\textbf{Engineering}: 7.5$\times$ single-process speedup (shared shortest-path trees), $\times$8 parallel $\Rightarrow$ 390 runs in a few hours.\\
 Enabled full multi-seed reproduction + 3 extensions without cutting corners on the paper's model.}}
 \end{center}
 
@@ -1153,7 +1153,7 @@ Enabled full multi-seed reproduction + 3 extensions without cutting corners on t
 \begin{itemize}\itemsep0.25em
   \item \textbf{Faithful paper reproduction} across all 3 phases (networks, Fig.\ 5, Fig.\ 6) with multi-seed statistics
   \item \textbf{Algorithm / engineering improvement}:\\
-        midterm per-agent A* $\to$ batch SSSP (7.5$\times$ single-process, 60$\times$ overall)
+        per-agent shortest-path query $\to$ shared shortest-path trees (7.5$\times$ single-process, 60$\times$ overall)
   \item \textbf{Three extensions} enabled by that speedup\\
         ($P_{\max}$, $H_{\max}$, finer $\varepsilon_p$)
 \end{itemize}
@@ -1190,7 +1190,7 @@ We demonstrated the prerequisite; each extension candidate is cataloged in the b
   \item Zhang, Yang. \textbf{Agent-based Modeling of Pedestrian Dynamics}. IEEE EMBC 2021.\\
         {\scriptsize (Used to disambiguate preprocessing choices not stated in the CASE paper.)}
   \item Boeing, G. \textbf{OSMnx}. Python package for street-network analysis.
-  \item Virtanen et al. \textbf{SciPy} (batch Dijkstra via \texttt{scipy.sparse.csgraph}).
+  \item Virtanen et al. \textbf{SciPy} (sparse-graph shortest-path routines).
   \item OpenStreetMap contributors. \textbf{OpenStreetMap}. \url{openstreetmap.org}
 \end{itemize}
 
