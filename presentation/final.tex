@@ -368,50 +368,54 @@ $RI$ = impacted rate, $RS$ = survival rate, $RC$ = casualty rate, $RL$ = leftove
 \end{frame}
 
 % ============================================================
-% SLIDE 5: Why speed matters
+% SLIDE 6: What the paper tells us --- and what it leaves to us
 % ============================================================
-\begin{frame}[t]{Why speed matters: 390 runs, thousands of agents each}
+\begin{frame}[t]{What the paper tells us --- and what it leaves to us}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
-\column{0.50\textwidth}
-\textbf{Per single run} (Pmax = 2{,}000, 121 steps):
-\vspace{0.3em}
-\begin{itemize}\itemsep0.25em
-  \item $\sim 2{,}000$ active agents
-  \item $121$ time steps
-  \item Each non-panicked agent recomputes its path \keyterm{every step}\\
-        {\scriptsize (paper spec: ``pedestrians rely on up-to-date observations'')}
-  \item $\Rightarrow \sim 200{,}000$+ shortest-path calls per run
-\end{itemize}
-
-\vspace{0.4em}
-\textbf{Across our full experiment:}
-\vspace{0.3em}
-\begin{itemize}\itemsep0.25em
-  \item Paper reproduction: 14 configs $\times$ 10 seeds $=$ 140 runs
-  \item Extensions: $\sim 250$ additional runs
-  \item \textbf{Total: $\sim 390$ runs}
-\end{itemize}
-
-\column{0.46\textwidth}
-\vspace{0.1em}
-\begin{alertblock}{\small A na\"ive approach}
+\column{0.48\textwidth}
+\begin{block}{\small What the paper specifies}
 \scriptsize
-Per-agent shortest-path query, one call at a time, pure Python.\\[3pt]
-1 run $\approx$ 5--15 minutes (measured).\\[3pt]
-$\Rightarrow$ 390 runs $\approx$ \textbf{1.5--4 days} of wall time.
-\end{alertblock}
-
-\vspace{0.4em}
-\begin{block}{\small Our implementation}
-\scriptsize
-Same Algorithms 1, 2 from the paper.\\
-Different \emph{functions} for path computation (slides 7--11).\\[3pt]
-1 run $\approx$ 32 seconds.\\[3pt]
-390 runs $\approx$ \textbf{3.4 hours} (8 workers).
+\begin{itemize}\itemsep0.25em
+  \item Python 3.7 environment
+  \item Apple M1 Pro, 16 GB RAM\\
+        (8-core CPU, 14-core GPU)
+  \item Algorithms 1 \& 2 --- \emph{decision logic only};\\
+        path-computation mechanism unspecified
+  \item Measured wall-time per run:\\
+        $P_{\max} = 2{,}000 \to$ \textbf{2.5 h}\\
+        $P_{\max} = 8{,}000 \to$ \textbf{22 h}
+\end{itemize}
 \end{block}
+
+\column{0.48\textwidth}
+\begin{alertblock}{\small What the paper leaves silent}
+\scriptsize
+\begin{itemize}\itemsep0.25em
+  \item Shortest-path library / algorithm
+  \item Per-step path policy (recompute? cache?)
+  \item Parallel execution strategy\\
+        (paper describes ``a single simulation run'')
+  \item RNG scheme for controlled experiments
+  \item Reproducibility seeding
+\end{itemize}
+\end{alertblock}
 \end{columns}
+
+\vspace{0.6em}
+\begin{center}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
+At the paper's 2.5\,h/run, reproducing our \textbf{390-run experiment} would take $\sim$\,\textbf{41 days} of sequential compute.\\
+Our engineered pipeline does it in \textbf{3.4 hours}.\\[2pt]
+$\Rightarrow$ The engineering isn't a side achievement --- it's the prerequisite for every chart in the rest of this deck.
+}}
+\end{center}
+
+\vspace{0.3em}
+{\scriptsize\textcolor{gray}{Hardware comparison is indicative --- Apple M1 Pro is a reasonably fast chip; most of the gap is algorithmic, not hardware.}}
+
+\source{Shi et al.\ (2024), p.\ 379}
 \end{frame}
 
 % ============================================================
