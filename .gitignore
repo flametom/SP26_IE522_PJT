@@ -14,8 +14,7 @@ trash/
 *:Zone.Identifier
 
 # Internal docs
-HANDOFF.md
-HANDOFF_DETAILED.md
+HANDOFF*.md
 CROSSCHECK_FOR_GPT.md
 
 # Generated animation frames
