@@ -64,7 +64,16 @@ if __name__ == "__main__":
                alpha=0.6, label="~20 agents / building")
 
     ax.set_xscale("log")
-    ax.set_xlabel("Pmax (log scale)")
+    # Major ticks: readable set covering the experimental range
+    major = [2000, 5000, 10000, 20000, 50000, 97000]
+    ax.set_xticks(major)
+    ax.set_xticklabels([f"{x//1000}K" for x in major], fontsize=9)
+    # All experimental points as minor ticks (visible on log axis)
+    all_xs = sorted({x for hm in [5, 10, 15] for x in group(data, hm)[0]})
+    ax.set_xticks([x for x in all_xs if x not in major], minor=True)
+    ax.tick_params(axis="x", which="minor", length=4, color="gray")
+    ax.set_xlim(min(all_xs) * 0.85, max(all_xs) * 1.15)
+    ax.set_xlabel("Pmax (log scale; major ticks = 2K, 5K, 10K, 20K, 50K, 97K)")
     ax.set_ylabel("RI (%)")
     ax.set_title("Extension 1: RI vs. Pmax -- independence breaks at extreme populations\n"
                  "(PSU-UP, eps_p = 10%, 10-seed mean +/- SD)")
