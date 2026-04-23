@@ -396,9 +396,9 @@ $RI$ = impacted rate, $RS$ = survival rate, $RC$ = casualty rate, $RL$ = leftove
 
 \column{0.46\textwidth}
 \vspace{0.1em}
-\begin{alertblock}{\small With a naïve implementation}
+\begin{alertblock}{\small Midterm version}
 \scriptsize
-Per-agent \texttt{nx.astar\_path} in pure Python.\\[3pt]
+Per-agent shortest-path query, one call at a time, in pure Python.\\[3pt]
 1 run $\approx$ 5--15 minutes (measured).\\[3pt]
 $\Rightarrow$ 390 runs $\approx$ \textbf{1.5--4 days} of wall time.
 \end{alertblock}
@@ -438,7 +438,7 @@ Different \emph{functions} for path computation.\\[3pt]
 
 \vspace{0.5em}
 \textbf{Root cause:}\\
-Every non-panicked agent calls \texttt{nx.astar\_path} from its current position, every step, in pure Python.
+Every non-panicked agent triggers its own shortest-path query from its current position, every step, in pure Python.
 
 \vspace{0.5em}
 {\scriptsize\textcolor{gray}{Measured on PSU-UP, Pmax=2000, Hmax=5, $\varepsilon_p$=10\%, seed=42.}}
@@ -448,38 +448,38 @@ Every non-panicked agent calls \texttt{nx.astar\_path} from its current position
 % ============================================================
 % SLIDE 7: Engineering ② --- scipy batch SSSP
 % ============================================================
-\begin{frame}[t,fragile,shrink=8]{Engineering \textcircled{\scriptsize 2}: From midterm A* to batch SSSP}
+\begin{frame}[t,fragile,shrink=8]{Engineering \textcircled{\scriptsize 2}: From per-agent queries to batch shortest-path trees}
 \footnotesize
 
-\textbf{Midterm baseline:} per-agent A* (Euclidean heuristic, pure Python).\\
-\textbf{Insight for post-midterm:} many agents share destinations (buildings, shelters). Compute \emph{one} shortest-path tree per unique destination, reuse across agents.
-{\scriptsize (SSSP = Single-Source Shortest Path tree, one source $\to$ all targets.)}
+\textbf{Midterm baseline:} each agent independently queries the graph for its own shortest path to destination. With 2{,}000 agents $\times$ 121 steps, that is $\sim$200K independent shortest-path queries per run.
+
+\vspace{0.3em}
+\textbf{Post-midterm insight:} many agents share destinations --- the same building, the same shelter. Compute \emph{one} shortest-path \emph{tree} per unique destination; all agents heading there reuse that tree with a constant-time lookup.
 
 \vspace{0.4em}
 \begin{columns}[T,onlytextwidth]
 \column{0.49\textwidth}
-\begin{block}{\scriptsize Midterm version (per-agent A*)}
+\begin{block}{\scriptsize Midterm (per-agent query)}
 \vspace{-0.3em}
 \begin{semiverbatim}\tiny
 for p in active_humans:
-  path = nx.astar_path(
+  path = shortest_path(
       G, p.src, p.dest)
 \end{semiverbatim}
 \vspace{-0.3em}
+$O(N)$ calls per step.
 \end{block}
 
 \column{0.49\textwidth}
-\begin{block}{\scriptsize Post-midterm (batch SSSP)}
+\begin{block}{\scriptsize Post-midterm (batch tree)}
 \vspace{-0.3em}
 \begin{semiverbatim}\tiny
-dests = set(p.dest for p in active_humans)
-_, preds = sp_dijkstra(
-    sparse_matrix,
-    indices=dest_indices,
-    return_predecessors=True)
-# each agent: O(path_length) lookup in preds
+for dest in unique_destinations:
+  tree[dest] = shortest_path_tree(G, dest)
+# each agent: O(1) lookup in tree[p.dest]
 \end{semiverbatim}
 \vspace{-0.3em}
+$O(K)$ calls per step, $K \ll N$.
 \end{block}
 \end{columns}
 
@@ -490,21 +490,21 @@ _, preds = sp_dijkstra(
 {\scriptsize
 \begin{tabular}{lcc}
 \toprule
-& \textbf{Per-step calls} & \textbf{Per-step total} \\
+& \textbf{Calls / step} & \textbf{Total cost / step} \\
 \midrule
-Per-agent A* & $O(N)$ & $O(N \cdot (V{+}E) \log V)$ \\
-Batch SSSP   & $O(K)$ & $O(K \cdot (V{+}E) + V)$ \\
+Per-agent query (midterm) & $O(N)$ & $O(N \cdot (V{+}E) \log V)$ \\
+Batch tree (post-midterm) & $O(K)$ & $O(K \cdot (V{+}E) + V)$ \\
 \bottomrule
 \end{tabular}}
 \end{center}
-{\scriptsize $N$ = active agents, $K$ = unique destinations, $K \ll N$.}
+{\scriptsize $N$ = active agents; $K$ = unique destinations; $K \ll N$ because many agents share the same building or shelter.}
 
 \column{0.42\textwidth}
 \begin{alertblock}{\scriptsize Speedup}
 \scriptsize
-\textbf{230$\times$} on \texttt{algo1} section alone\\
+\textbf{230$\times$} on the path-computation section alone\\
 \textbf{7.5$\times$} single-process end-to-end\\
-(plus: scipy dijkstra is C; networkx is Python)
+(plus: the batch library is compiled C; the per-agent loop was pure Python)
 \end{alertblock}
 \end{columns}
 \end{frame}
@@ -512,28 +512,21 @@ Batch SSSP   & $O(K)$ & $O(K \cdot (V{+}E) + V)$ \\
 % ============================================================
 % SLIDE 8: Engineering ③ --- A* heuristic + per-step recomputation
 % ============================================================
-\begin{frame}[t,fragile,shrink=5]{Engineering \textcircled{\scriptsize 3}: Where A* is still used, per-step recomputation, panic noise}
+\begin{frame}[t,fragile,shrink=5]{Engineering \textcircled{\scriptsize 3}: Per-step recomputation \& panic noise}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
 \column{0.50\textwidth}
-\begin{block}{\scriptsize A* (from midterm) is kept for cases where batch SSSP can't help}
+\begin{alertblock}{\small Per-step recomputation is kept}
 \scriptsize
-\begin{itemize}\itemsep0.1em
-  \item \textbf{Shelter redirect} (agent just got impacted, destination changed mid-step)
-  \item \textbf{Congestion-aware routing} (edge-weight depends on current flow; no shared tree)
-  \item \textbf{Panicked agents} (noisy weights $\Rightarrow$ per-agent random)
-\end{itemize}
-\vspace{-0.3em}
-\begin{semiverbatim}\tiny
-def heuristic(u, v):   # Euclidean
-    ux, uy = coords[u]; vx, vy = coords[v]
-    return ((ux-vx)**2 + (uy-vy)**2) ** 0.5
-\end{semiverbatim}
-$\sim$2--3$\times$ faster than plain Dijkstra on spatial graphs.
-\end{block}
+Paper Section III-C: \emph{``pedestrians rely on up-to-date observations of their immediate surroundings.''}\\[4pt]
+We do NOT cache paths across steps.\\
+Every non-panicked agent's path is recomputed every step against the \emph{current} flow state.\\[4pt]
+This is why the per-step shortest-path cost dominates the profile (slide 7).
+\end{alertblock}
 
-\begin{block}{\scriptsize Panicked agents: \emph{noisy} weights}
+\vspace{0.4em}
+\begin{block}{\scriptsize Panicked agents: \emph{noisy} edge weights}
 \vspace{-0.3em}
 \begin{semiverbatim}\tiny
 def noisy_weight(u, v, data):
@@ -541,24 +534,28 @@ def noisy_weight(u, v, data):
     return base * (1.0 + rng.exponential(1.0))
 \end{semiverbatim}
 \vspace{-0.3em}
-Models paper's ``limited observations'' for panicked agents.
+{\scriptsize Models paper's ``limited observations'' --- panicked agents perceive edge lengths with multiplicative random noise, so their path drifts away from the optimum. Their path is computed per-agent (noise is per-agent), so the batch tree doesn't apply here.}
 \end{block}
 
 \column{0.46\textwidth}
-\begin{alertblock}{\small Per-step recomputation is kept}
+\begin{block}{\small Edge cases \emph{outside} the batch tree}
 \scriptsize
-Paper Section III-C: \emph{``pedestrians rely on up-to-date observations of their immediate surroundings.''}\\[4pt]
-We do NOT cache paths.\\
-Every non-panicked agent's path is recomputed every step against the current flow state.
-\end{alertblock}
-
-\vspace{0.6em}
-\begin{center}
-\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.95\linewidth}{\centering\scriptsize
-\textbf{Algorithms 1 and 2 are unchanged from the paper.}\\
-Only the \emph{functions} used for path computation were replaced.}}
-\end{center}
+Three situations keep the per-agent query alive, because agents don't share destinations there:
+\begin{itemize}\itemsep0.15em
+  \item \textbf{Shelter redirect} --- agent just got impacted this step, destination flips from building to nearest shelter
+  \item \textbf{Congestion-aware reroute} --- edge cost temporarily inflated for this agent's detour
+  \item \textbf{Panicked agents} --- noisy weights above
+\end{itemize}
+\scriptsize These are a few percent of calls. The remaining $\sim$95\% hit the shared batch tree and get the 7.5$\times$ speedup.
+\end{block}
 \end{columns}
+
+\vspace{0.4em}
+\begin{center}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
+\textbf{Algorithms 1 and 2 are unchanged from the paper.}
+Only the \emph{path-computation function} was swapped.}}
+\end{center}
 \end{frame}
 
 % ============================================================
@@ -602,7 +599,7 @@ $\Rightarrow$ Can't tell whether a higher RI is from more people or from differe
 % ============================================================
 % SLIDE 10: Engineering ⑤ --- Benchmark results
 % ============================================================
-\begin{frame}[t,shrink=10]{Engineering \textcircled{\scriptsize 5}: Benchmark --- midterm A* vs batch SSSP}
+\begin{frame}[t,shrink=10]{Engineering \textcircled{\scriptsize 5}: Benchmark --- midterm vs post-midterm}
 \footnotesize
 
 \begin{center}
@@ -612,11 +609,11 @@ $\Rightarrow$ Can't tell whether a higher RI is from more people or from differe
 \vspace{0.2em}
 \begin{columns}[T,onlytextwidth]
 \column{0.48\textwidth}
-\begin{alertblock}{\small Total speedup (batch vs midterm A*)}
+\begin{alertblock}{\small Total speedup}
 \scriptsize
-\textbf{7.5$\times$} single-process (batch SSSP, scipy C)\\
+\textbf{7.5$\times$} single-process end-to-end\\
 \textbf{$\times$ 8 workers $=$ $\sim$60$\times$} overall\\[2pt]
-$\Rightarrow$ 390 runs (8-worker parallel): \\ midterm A* $\sim$ 2.3 h $\to$ batch SSSP $\sim$ 18 min
+$\Rightarrow$ 390 runs (8-worker parallel): \\ midterm $\sim$ 2.3 h $\to$ post-midterm $\sim$ 18 min
 \end{alertblock}
 
 \column{0.48\textwidth}
