@@ -87,75 +87,208 @@
 \end{frame}
 
 % ============================================================
-% SLIDE 2: Problem & Model recap (compressed from 1차)
+% SLIDE 2: RECAP --- Problem & Motivation (from midterm)
 % ============================================================
-\begin{frame}[t,shrink=10]{Recap: Problem \& Three-Component Model}
-\footnotesize
+\begin{frame}[t,shrink=10]{Recap: Simulating Emergency Evacuation}
+\small
 
 \begin{columns}[T,onlytextwidth]
-\column{0.45\textwidth}
-\textbf{Problem:} hazard strikes a community; thousands evacuate simultaneously.\\
-Needed: agent-based sim capturing individual decisions + emergent congestion + panic.
+\column{0.55\textwidth}
+
+\textbf{Scenario:} A hazard (fire, explosion, flood) strikes a community.\\
+Thousands of pedestrians must evacuate simultaneously.
 
 \vspace{0.6em}
+\begin{block}{What makes this hard to simulate?}
+\footnotesize
+\begin{itemize}\itemsep0.3em
+  \item Each person decides \keyterm{independently} --- where to go, which route to take
+  \item Decisions depend on \keyterm{local information}: is this road congested? Am I near the hazard?
+  \item \keyterm{Panic} causes irrational behavior --- random routing instead of shortest path
+  \item Congestion is \keyterm{emergent} --- it arises from many individual decisions, not a global rule
+\end{itemize}
+\end{block}
+
+\vspace{0.3em}
 \begin{alertblock}{}
-\scriptsize
-Traditional process-flow models cannot capture emergent crowd dynamics.
-$\Rightarrow$ \textbf{Multi-agent simulation} on a spatial network.
+\footnotesize
+A traditional process-flow model cannot capture this.\\
+$\Rightarrow$ We need \textbf{Agent-Based Simulation}: model each pedestrian as an autonomous agent with its own state, position, speed, and decision logic.
 \end{alertblock}
 
-\column{0.55\textwidth}
-\vspace{-0.5em}
+\column{0.42\textwidth}
+\vspace{0.5em}
 \begin{center}
-\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.70, transform shape]
-  \node[panelbox, fill=highlightblue!85, text=white, minimum width=5cm, minimum height=1.3cm, align=center] (net) at (0, 2.2)
-    {\textbf{Community Network}\\ {\scriptsize $G=(V,E)$, OSM-derived}};
-  \node[panelbox, fill=stateimpacted!85, text=white, minimum width=3.6cm, minimum height=1.3cm, align=center] (human) at (-2.6, -0.2)
-    {\textbf{Human Agents}\\ {\scriptsize 6 states, 3 groups}};
-  \node[panelbox, fill=highlightred!85, text=white, minimum width=3.6cm, minimum height=1.3cm, align=center] (hazard) at (2.6, -0.2)
-    {\textbf{Hazard Agents}\\ {\scriptsize expanding, moving}};
-  \draw[transarrow, highlightblue] (net.south) -- (human.north);
-  \draw[transarrow, highlightblue] (net.south) -- (hazard.north);
-  \draw[transarrow, highlightred] (hazard.west) -- (human.east);
+\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.75, transform shape]
+  % Simple network
+  \draw[lightgrayfill!50!gray, very thick] (0,4) -- (2,4) -- (4,4);
+  \draw[lightgrayfill!50!gray, very thick] (0,2) -- (2,2) -- (4,2);
+  \draw[lightgrayfill!50!gray, very thick] (0,0) -- (2,0) -- (4,0);
+  \draw[lightgrayfill!50!gray, very thick] (0,0) -- (0,2) -- (0,4);
+  \draw[lightgrayfill!50!gray, very thick] (2,0) -- (2,2) -- (2,4);
+  \draw[lightgrayfill!50!gray, very thick] (4,0) -- (4,2) -- (4,4);
+
+  % Hazard zone
+  \fill[hazardred, opacity=0.12] (2.8, 3.2) circle (1.5);
+  \draw[hazardred, dashed, thick, opacity=0.5] (2.8, 3.2) circle (1.5);
+  \node[hazardred, font=\small\bfseries] at (2.8, 3.2) {Hazard};
+
+  % Agents moving in different directions
+  \fill[statenormal] (0.3, 3.8) circle (5pt);
+  \draw[->, statenormal, thick] (0.3, 3.8) -- (0.9, 3.8);
+  \fill[statenormal] (0.5, 2.1) circle (5pt);
+  \draw[->, statenormal, thick] (0.5, 2.1) -- (0.5, 1.4);
+  \fill[stateimpacted] (2.3, 3.5) circle (5pt);
+  \draw[->, stateimpacted, thick] (2.3, 3.5) -- (1.8, 3.0);
+  \node[font=\tiny, highlightred] at (2.3, 3.9) {\textbf{!}};
+  \fill[stateimpacted] (3.5, 2.8) circle (5pt);
+  \draw[->, stateimpacted, thick] (3.5, 2.8) -- (3.5, 2.2);
+  \fill[statenormal] (1.0, 0.3) circle (5pt);
+  \draw[->, statenormal, thick] (1.0, 0.3) -- (1.6, 0.3);
+  \fill[statequeuing] (3.8, 1.0) circle (5pt);
+  \node[font=\tiny] at (4.3, 1.0) {wait};
+
+  % Shelter
+  \node[regular polygon, regular polygon sides=3, fill=statesurvival,
+        minimum size=0.4cm, draw=black, thick] at (0, 0) {};
+  \node[below, font=\tiny\bfseries, statesurvival] at (0, -0.25) {Shelter};
+
+  % Labels
+  \node[font=\tiny, statenormal] at (0.3, 4.3) {Normal};
+  \node[font=\tiny, stateimpacted] at (3.5, 3.3) {Impacted};
 \end{tikzpicture}
 \end{center}
+
+\vspace{0.3em}
+{\scriptsize\textcolor{gray}{Each dot = one agent making its own decision}}
 \end{columns}
-\source{Shi et al.\ (2024) --- presented in the midterm}
+\source{Shi et al.\ (2024) --- presented at midterm}
 \end{frame}
 
 % ============================================================
-% SLIDE 3: Agents & Algorithms recap
+% SLIDE 3: RECAP --- Model Overview (3 components)
 % ============================================================
-\begin{frame}[t,shrink=10]{Recap: Agents \& Algorithms 1--2}
+\begin{frame}[t]{Recap: Three-Component Model}
+\small
+
+\begin{center}
+\begin{tikzpicture}[>=Stealth, font=\small, scale=0.88, transform shape]
+  % Community Network (top)
+  \node[panelbox, fill=highlightblue!85, text=white, minimum width=6.5cm, minimum height=2.0cm, align=center] (net) at (0, 3.2)
+    {\textbf{Community Network (G = (V, E))}\\[2pt]
+     \scriptsize Nodes: Buildings, Intersections, Shelters\\
+     Edges: Roads with capacity $c_{e_{ij}} = l_{e_{ij}} \times D_{\max}$};
+
+  % Human Agents (bottom left)
+  \node[panelbox, fill=stateimpacted!85, text=white, minimum width=5.2cm, minimum height=2.2cm, align=center] (human) at (-4.5, -1.2)
+    {\textbf{Human Agents}\\[2pt]
+     \scriptsize 6 States (Normal $\to$ Casualty)\\
+     3 demographic groups\\
+     Shortest path vs.\ random (panic)};
+
+  % Hazard Agents (bottom right)
+  \node[panelbox, fill=highlightred!85, text=white, minimum width=5.2cm, minimum height=2.2cm, align=center] (hazard) at (4.5, -1.2)
+    {\textbf{Hazard Agents}\\[2pt]
+     \scriptsize Circular impact zone\\
+     Expands + moves over time\\
+     Triggers impact, casualty, panic};
+
+  % Left arrows (Network <-> Human)
+  \draw[transarrow, highlightblue] ([xshift=-1cm]net.south) -- ([xshift=0.5cm]human.north)
+    node[midway, left=4pt, font=\scriptsize, text=highlightblue] {Routes};
+  \draw[transarrow, stateimpacted] ([xshift=1cm]human.north) -- ([xshift=-0.5cm]net.south)
+    node[midway, right=4pt, font=\scriptsize, text=stateimpacted] {Congestion};
+
+  % Right arrows (Network <-> Hazard)
+  \draw[transarrow, highlightblue] ([xshift=1cm]net.south) -- ([xshift=-0.5cm]hazard.north)
+    node[midway, left=4pt, font=\scriptsize, text=highlightblue] {Spatial info};
+  \draw[transarrow, highlightred] ([xshift=0.5cm]hazard.north) -- ([xshift=1.5cm]net.south)
+    node[midway, right=4pt, font=\scriptsize, text=highlightred] {Damage};
+
+  % Bottom arrows (Human <-> Hazard)
+  \draw[transarrow, highlightred] (hazard.west) -- (human.east)
+    node[midway, above=2pt, font=\scriptsize, text=highlightred] {Risk (impact / casualty)};
+  \draw[transarrow, stateimpacted] ([yshift=-4mm]human.east) -- ([yshift=-4mm]hazard.west)
+    node[midway, below=2pt, font=\scriptsize, text=stateimpacted] {Avoidance (evacuation)};
+
+  % Algorithm labels
+  \node[fill=lightbluefill, rounded corners, draw=highlightblue, font=\scriptsize\bfseries, text=highlightblue] at (-4.5, 1.5) {Algorithm 1: Human--Network};
+  \node[fill=lightredfill, rounded corners, draw=highlightred, font=\scriptsize\bfseries, text=highlightred] at (4.5, 1.5) {Algorithm 2: Human--Hazard};
+\end{tikzpicture}
+\end{center}
+\source{Shi et al.\ (2024), Section III --- presented at midterm}
+\end{frame}
+
+% ============================================================
+% SLIDE 4: RECAP --- Agents + 6 states + Algorithms 1/2
+% ============================================================
+\begin{frame}[t,shrink=5]{Recap: Agent States \& Algorithms 1--2}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
 \column{0.46\textwidth}
-\textbf{Human states (6)} --- Normal, Queuing, Impacted, Arrival, Survival, Casualty.
-Panic is \keyterm{irreversible}; impacted agents reroute to nearest shelter.
+\textbf{Human agent is defined by:}
+\vspace{0.2em}
+\begin{itemize}\itemsep0.2em
+  \item \parambox{Position}{current node or edge}
+  \item \parambox{Destination}{building (normal) or shelter (after impact)}
+  \item \parambox{Speed}{72--96 m/min by age}
+  \item \parambox{State}{one of 6 behavioral modes (right)}
+  \item \parambox{Panic $\varepsilon_p$}{probability of irrational routing}
+\end{itemize}
 
-\vspace{0.4em}
-\textbf{Hazards} --- circular impact zone, expanding and moving over time, with a lifespan.
-
-\column{0.52\textwidth}
+\vspace{0.3em}
 \begin{block}{\scriptsize Algorithm 2 --- Human$\leftrightarrow$Hazard (every step)}
 \scriptsize
-\begin{enumerate}\itemsep0.1em
-  \item If agent inside hazard \& first impact $\to$ IMPACTED + reroute to shelter
+\begin{enumerate}\itemsep0.05em
+  \item Inside hazard \& first impact $\to$ \textcolor{stateimpacted}{Impacted} + reroute to shelter
   \item Casualty check (higher prob near center)
-  \item Panic check (irreversible, $\varepsilon_p$ times group rate)
+  \item Panic check (irreversible, $\varepsilon_p \times$ group rate)
 \end{enumerate}
 \end{block}
 
 \begin{block}{\scriptsize Algorithm 1 --- Human$\leftrightarrow$Network (every step)}
 \scriptsize
-\begin{enumerate}\itemsep0.1em
-  \item If on edge $\to$ check edge congestion: queue or continue
-  \item If at node $\to$ check node congestion: queue, reroute, random (panic), or advance
+\begin{enumerate}\itemsep0.05em
+  \item On edge $\to$ check edge congestion: queue or continue
+  \item At node $\to$ reroute, queue, or random (panic)
 \end{enumerate}
 \end{block}
+
+\column{0.52\textwidth}
+\textbf{State Transitions}
+\vspace{0.1em}
+
+\begin{center}
+\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.68, transform shape]
+  \node[statebox, fill=statenormal] (N) at (0, 3) {Normal};
+  \node[statebox, fill=statequeuing] (Q) at (3.5, 3) {Queuing};
+  \node[statebox, fill=stateimpacted] (I) at (3.5, 0.5) {Impacted};
+  \node[statebox, fill=statearrival] (A) at (-1.2, 0.5) {Arrival};
+  \node[statebox, fill=statesurvival] (S) at (1.2, -1.8) {Survival};
+  \node[statebox, fill=statecasualty] (C) at (5.0, -1.8) {Casualty};
+
+  \draw[statearrival, very thick, rounded corners=6pt] ([xshift=-3pt, yshift=-3pt]A.south west) rectangle ([xshift=3pt, yshift=3pt]A.north east);
+  \draw[statesurvival, very thick, rounded corners=6pt] ([xshift=-3pt, yshift=-3pt]S.south west) rectangle ([xshift=3pt, yshift=3pt]S.north east);
+  \draw[statecasualty, very thick, rounded corners=6pt] ([xshift=-3pt, yshift=-3pt]C.south west) rectangle ([xshift=3pt, yshift=3pt]C.north east);
+
+  \draw[transarrow] (N) -- (Q) node[midway, above, font=\tiny] {Road full};
+  \draw[transarrow] (Q) to[bend left=20] node[midway, below, font=\tiny] {Cleared} (N);
+  \draw[transarrow] (N) -- (A) node[midway, left, font=\tiny, align=right] {Reach\\dest.};
+  \draw[transarrow] (N) -- (I) node[midway, right, font=\tiny, xshift=3pt] {In hazard};
+  \draw[transarrow] (Q) -- (I) node[midway, right, font=\tiny] {In hazard};
+  \draw[transarrow] (I) -- (S) node[midway, left, font=\tiny, align=right] {Reach\\shelter};
+  \draw[transarrow] (I) -- (C) node[midway, right, font=\tiny, align=left] {Fatal};
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.2em}
+{\scriptsize
+\textbf{Key insight:} Once \textcolor{stateimpacted}{Impacted}, destination changes from building to nearest \textcolor{statesurvival}{shelter}.
+Panic is \textbf{irreversible}.}
+
 \end{columns}
-\source{Shi et al.\ (2024), Section III --- presented in the midterm}
+\source{Shi et al.\ (2024), Section III, Tables II--III --- presented at midterm}
 \end{frame}
 
 % ============================================================
@@ -196,6 +329,30 @@ Panic is \keyterm{irreversible}; impacted agents reroute to nearest shelter.
 \vspace{0.3em}
 {\scriptsize 10 seeds per config; mean $\pm$ SD reported throughout.}
 \end{columns}
+
+\vspace{0.6em}
+\begin{center}
+\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.95, transform shape]
+  % Pipeline of phases
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.4cm, minimum height=0.9cm, align=center] (p1) at (-5.5, 0)
+    {\textbf{Phase 1}\\ {\tiny 5 networks}};
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.4cm, minimum height=0.9cm, align=center] (p2a) at (-2.5, 0)
+    {\textbf{Phase 2a}\\ {\tiny $P_{\max}\times H_{\max}$}};
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.4cm, minimum height=0.9cm, align=center] (p2b) at (0.5, 0)
+    {\textbf{Phase 2b}\\ {\tiny $\varepsilon_p$ sweep}};
+  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=3.5cm, minimum height=0.9cm, align=center] (ext) at (4.3, 0)
+    {\textbf{Extensions 1,2,3}\\ {\tiny $P_{\max}$, $H_{\max}$, $\varepsilon_p$ finer}};
+
+  \draw[transarrow] (p1) -- (p2a);
+  \draw[transarrow] (p2a) -- (p2b);
+  \draw[transarrow, highlightred] (p2b) -- (ext);
+
+  \node[below=0.1em of p1, font=\tiny] {$\sim$5 runs};
+  \node[below=0.1em of p2a, font=\tiny] {90 runs};
+  \node[below=0.1em of p2b, font=\tiny] {90 runs};
+  \node[below=0.1em of ext, font=\tiny] {$\sim$210 runs};
+\end{tikzpicture}
+\end{center}
 \end{frame}
 
 % ============================================================
@@ -426,32 +583,32 @@ $\Rightarrow$ Can't tell whether a higher RI is from more people or from differe
 % ============================================================
 % SLIDE 10: Engineering ⑤ --- Benchmark results
 % ============================================================
-\begin{frame}[t]{Engineering \textcircled{\scriptsize 5}: Benchmark --- na\"{i}ve vs optimized}
+\begin{frame}[t,shrink=10]{Engineering \textcircled{\scriptsize 5}: Benchmark --- na\"{i}ve vs optimized}
 \footnotesize
 
 \begin{center}
-\includegraphics[width=0.92\linewidth]{assets/benchmark_scaling.pdf}
+\includegraphics[width=0.80\linewidth]{assets/benchmark_scaling.pdf}
 \end{center}
 
-\vspace{0.3em}
+\vspace{0.2em}
 \begin{columns}[T,onlytextwidth]
 \column{0.48\textwidth}
 \begin{alertblock}{\small Total speedup}
 \scriptsize
 \textbf{7.5$\times$} single-process (batch SSSP + A* heuristic)\\
-\textbf{$\times$ 8 workers $=$ $\sim$60$\times$} overall\\[4pt]
+\textbf{$\times$ 8 workers $=$ $\sim$60$\times$} overall\\[2pt]
 $\Rightarrow$ 390 runs (8-worker parallel): \\ na\"{i}ve $\sim$ 2.3 h $\to$ optimized $\sim$ 18 min
 \end{alertblock}
 
 \column{0.48\textwidth}
 \begin{block}{\small What this speedup enabled}
 \scriptsize
-\begin{itemize}\itemsep0.1em
-  \item 10 seeds per config $\to$ mean $\pm$ SD throughout
+\begin{itemize}\itemsep0.05em
+  \item 10 seeds / config $\to$ mean $\pm$ SD
   \item Phase 1: 5 community networks
-  \item Extension Pmax 2K--97K (17 values $\times$ 3 Hmax)
-  \item Extension Hmax 5--30 (6 values)
-  \item Extension $\varepsilon_p$ 9-point finer resolution
+  \item Ext.\ Pmax 2K--97K (17 $\times$ 3 Hmax)
+  \item Ext.\ Hmax 5--30 (6 values)
+  \item Ext.\ $\varepsilon_p$ 9-point finer grid
 \end{itemize}
 \end{block}
 \end{columns}
@@ -466,7 +623,7 @@ $\Rightarrow$ 390 runs (8-worker parallel): \\ na\"{i}ve $\sim$ 2.3 h $\to$ opti
 \begin{columns}[T,onlytextwidth]
 \column{0.65\textwidth}
 \begin{center}
-\animategraphics[controls,loop,width=0.98\linewidth]{6}{assets/frames_psuup/sim_}{000}{060}
+\animategraphics[poster=30,controls,loop,width=0.98\linewidth]{6}{assets/frames_psuup/sim_}{000}{060}
 \end{center}
 
 \column{0.32\textwidth}
@@ -537,25 +694,42 @@ See backup slide for diagnostic detail.
 % ============================================================
 % SLIDE 13: Phase 1 --- PSU-UP network + flow
 % ============================================================
-\begin{frame}[t]{Phase 1: PSU-UP spatial network \& flow snapshot}
+\begin{frame}[t,shrink=10]{Phase 1: PSU-UP network (Fig.\ 3) \& flow snapshots (Fig.\ 4)}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
-\column{0.48\textwidth}
+\column{0.38\textwidth}
 \begin{center}
-\includegraphics[width=0.98\linewidth]{../results/fig3_network_PSU-UP.png}\\[2pt]
-{\scriptsize Fig.\ 3 reproduction --- PSU-UP walk network}
+\includegraphics[height=5.2cm]{../results/fig3_network_PSU-UP.png}\\[2pt]
+{\scriptsize \textbf{Fig.\ 3 reproduction} --- PSU-UP walk network\\
+969 buildings, $\sim$600 shelters}
 \end{center}
 
-\column{0.48\textwidth}
+\column{0.60\textwidth}
 \begin{center}
-\includegraphics[width=0.98\linewidth]{../results/fig4_flow_PSU-UP.png}\\[2pt]
-{\scriptsize Fig.\ 4 reproduction --- pedestrian flow over time}
+\includegraphics[width=\linewidth]{../results/fig4_flow_PSU-UP.png}\\[2pt]
+{\scriptsize \textbf{Fig.\ 4 reproduction} --- pedestrian flow snapshots at $t=0,30,60,90,120$ min}
 \end{center}
-\end{columns}
 
 \vspace{0.3em}
-{\scriptsize\textcolor{gray}{Building nodes (yellow), shelters (green $\triangle$), hazard zones (red $\bigcirc$), agent states coded by color and shape.}}
+{\scriptsize
+\textcolor{statenormal}{$\bullet$ Normal} \
+\textcolor{statequeuing}{$\bullet$ Queuing} \
+\textcolor{stateimpacted}{$\bullet$ Impacted} \
+\textcolor{statesurvival}{$\bullet$ Survival} \
+\textcolor{statecasualty}{$\times$ Casualty} \
+\textcolor{highlightred}{$\bigcirc$ Hazard}
+}
+\end{columns}
+
+\vspace{0.4em}
+\begin{center}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
+At $t=0$ agents are at origin buildings (blue).
+Hazard emerges at $t\approx 4\text{--}10$ min $\to$ \textcolor{stateimpacted}{red impacted agents}.
+By $t=120$ most are \textcolor{statesurvival}{survival/arrival}; panicked stragglers remain.
+}}
+\end{center}
 \end{frame}
 
 % ============================================================
@@ -698,30 +872,44 @@ Applied consistently across all 5 communities.
 \begin{frame}[t]{Three questions we could ask because our pipeline is fast}
 \footnotesize
 
+\vspace{0.2em}
+Our 60$\times$ overall speedup made it feasible to probe \textbf{far beyond the paper's tested ranges}.
+Three questions emerged naturally from the Phase 2 data:
+
+\vspace{0.6em}
 \begin{center}
 \begin{tikzpicture}[>=Stealth, font=\footnotesize, scale=0.95, transform shape]
-  \node[panelbox, fill=lightbluefill, minimum width=4.2cm, minimum height=1.8cm, align=center] at (-4.5, 0)
-    {\textbf{\textcircled{\scriptsize 1} $P_{\max}$ breakpoint}\\[3pt]
-     {\scriptsize Paper: $P_{\max}$ = 2K--8K}\\
-     {\scriptsize Us: 2K $\to$ \textbf{97K}}\\[3pt]
-     {\scriptsize \emph{Does independence hold?}}};
-  \node[panelbox, fill=lightredfill, minimum width=4.2cm, minimum height=1.8cm, align=center] at (0, 0)
-    {\textbf{\textcircled{\scriptsize 2} $H_{\max}$ saturation}\\[3pt]
-     {\scriptsize Paper: $H_{\max}$ = 5--15}\\
-     {\scriptsize Us: 5 $\to$ \textbf{30}}\\[3pt]
-     {\scriptsize \emph{Does RI grow without bound?}}};
-  \node[panelbox, fill=lightgreenfill, minimum width=4.2cm, minimum height=1.8cm, align=center] at (4.5, 0)
-    {\textbf{\textcircled{\scriptsize 3} $\varepsilon_p$ finer grid}\\[3pt]
-     {\scriptsize Paper: 5 points}\\
-     {\scriptsize Us: \textbf{9 points} (10\% incr.)}\\[3pt]
-     {\scriptsize \emph{Smooth or stepwise?}}};
+
+  % Question 1: Pmax breakpoint
+  \node[panelbox, fill=lightbluefill, text width=4.2cm, align=left] (q1) at (-4.8, 0)
+    {\textbf{\textcircled{\scriptsize 1} $P_{\max}$ breakpoint}\\[4pt]
+     {\scriptsize \textit{Question:} Does $RI$ stay independent of $P_{\max}$ at high populations?}\\[4pt]
+     {\scriptsize Paper tested: $P_{\max} \in [2K, 8K]$}\\
+     {\scriptsize We tested: $\mathbf{[2K, 97K]}$ ($\times$12 wider)}\\[4pt]
+     {\scriptsize \textcolor{highlightred}{\textbf{Finding:} holds $\leq 20K$, \\ breaks at $50K$}}};
+
+  % Question 2: Hmax saturation
+  \node[panelbox, fill=lightredfill, text width=4.2cm, align=left] (q2) at (0, 0)
+    {\textbf{\textcircled{\scriptsize 2} $H_{\max}$ saturation}\\[4pt]
+     {\scriptsize \textit{Question:} Does $RI$ keep growing as we add more hazards?}\\[4pt]
+     {\scriptsize Paper tested: $H_{\max} \in [5, 15]$}\\
+     {\scriptsize We tested: $\mathbf{[5, 30]}$ ($\times$2 wider)}\\[4pt]
+     {\scriptsize \textcolor{highlightred}{\textbf{Finding:} saturates at \\ $\sim$86\%, not linear}}};
+
+  % Question 3: finer epsilon_p
+  \node[panelbox, fill=lightgreenfill, text width=4.2cm, align=left] (q3) at (4.8, 0)
+    {\textbf{\textcircled{\scriptsize 3} $\varepsilon_p$ resolution}\\[4pt]
+     {\scriptsize \textit{Question:} Are there phase transitions between paper's 5 $\varepsilon_p$ points?}\\[4pt]
+     {\scriptsize Paper tested: 5 points (20\% spacing)}\\
+     {\scriptsize We tested: $\mathbf{9}$ points (10\% spacing)}\\[4pt]
+     {\scriptsize \textcolor{highlightred}{\textbf{Finding:} smooth curves,\\ diminishing returns}}};
+
 \end{tikzpicture}
 \end{center}
 
-\vspace{0.5em}
+\vspace{0.4em}
 \begin{center}
-\scriptsize
-Each extension answered on the next slide. Side-by-side animations for \textcircled{\scriptsize 1}, \textcircled{\scriptsize 2}, \textcircled{\scriptsize 3} follow.
+{\scriptsize Each extension answered on the next 3 slides $\to$ followed by side-by-side animations $\alpha$, $\beta$, $\gamma$.}
 \end{center}
 \end{frame}
 
@@ -834,7 +1022,7 @@ $\Rightarrow$ Panic management has highest impact at \emph{low-baseline} states.
 \footnotesize
 
 \begin{center}
-\animategraphics[controls,loop,width=0.95\linewidth]{6}{assets/frames_cmp_pmax/cmp_}{000}{060}
+\animategraphics[poster=30,controls,loop,width=0.95\linewidth]{6}{assets/frames_cmp_pmax/cmp_}{000}{060}
 \end{center}
 
 \vspace{0.3em}
@@ -848,7 +1036,7 @@ $\Rightarrow$ Panic management has highest impact at \emph{low-baseline} states.
 \footnotesize
 
 \begin{center}
-\animategraphics[controls,loop,width=0.95\linewidth]{6}{assets/frames_cmp_panic/cmp_}{000}{060}
+\animategraphics[poster=30,controls,loop,width=0.95\linewidth]{6}{assets/frames_cmp_panic/cmp_}{000}{060}
 \end{center}
 
 \vspace{0.3em}
@@ -862,7 +1050,7 @@ $\Rightarrow$ Panic management has highest impact at \emph{low-baseline} states.
 \footnotesize
 
 \begin{center}
-\animategraphics[controls,loop,width=0.95\linewidth]{6}{assets/frames_cmp_hmax/cmp_}{000}{060}
+\animategraphics[poster=30,controls,loop,width=0.95\linewidth]{6}{assets/frames_cmp_hmax/cmp_}{000}{060}
 \end{center}
 
 \vspace{0.3em}
@@ -900,11 +1088,29 @@ Agent seed = 42 held constant.}
 \end{alertblock}
 \end{columns}
 
-\vspace{0.6em}
+\vspace{0.4em}
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\footnotesize
 \textbf{Engineering}: 7.5$\times$ single-process speedup (scipy batch SSSP), $\times$8 parallel $\Rightarrow$ 390 runs in a few hours.\\
 Enabled full multi-seed reproduction + 3 extensions without cutting corners on the paper's model.}}
+\end{center}
+
+\vspace{0.5em}
+\begin{center}
+\begin{tikzpicture}[font=\footnotesize, scale=0.95, transform shape]
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (-6, 0)
+    {\textbf{\large 390}\\ {\tiny sim runs}};
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (-3.5, 0)
+    {\textbf{\large 10}\\ {\tiny seeds / config}};
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (-1, 0)
+    {\textbf{\large 5}\\ {\tiny communities}};
+  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (1.5, 0)
+    {\textbf{\large 60$\times$}\\ {\tiny total speedup}};
+  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (4.0, 0)
+    {\textbf{\large 3}\\ {\tiny novel findings}};
+  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (6.5, 0)
+    {\textbf{\large 0}\\ {\tiny algorithm changes}};
+\end{tikzpicture}
 \end{center}
 \end{frame}
 
@@ -934,6 +1140,28 @@ Enabled full multi-seed reproduction + 3 extensions without cutting corners on t
 \end{itemize}
 \end{alertblock}
 \end{columns}
+
+\vspace{0.7em}
+\begin{center}
+\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.9, transform shape]
+  % Impact / effort matrix
+  \draw[->, thick] (-5.5, 0) -- (5.5, 0) node[right] {\footnotesize Impact};
+  \draw[->, thick] (-5.5, 0) -- (-5.5, 3.0) node[above] {\footnotesize Effort};
+  % Quadrant labels
+  \node[font=\tiny, text=gray] at (-2.5, 2.6) {Low impact, high effort};
+  \node[font=\tiny, text=gray] at (2.5, 2.6) {High impact, high effort};
+  \node[font=\tiny, text=gray] at (-2.5, 0.3) {Low impact, low effort};
+  \node[font=\tiny, text=gray] at (2.5, 0.3) {\textbf{Quick wins}};
+  % Items
+  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, inner sep=3pt, font=\scriptsize] at (3.2, 0.9) {Panic-dep.\ casualty};
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, inner sep=3pt, font=\scriptsize] at (0.5, 1.8) {Shelter sensitivity};
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, inner sep=3pt, font=\scriptsize] at (3.5, 2.3) {Response agents};
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, inner sep=3pt, font=\scriptsize] at (-1.8, 2.4) {Social force};
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, inner sep=3pt, font=\scriptsize] at (-3.5, 1.3) {MDP panic};
+  \draw[gray, thin] (0, 0) -- (0, 3);
+  \draw[gray, thin] (-5.5, 1.5) -- (5.5, 1.5);
+\end{tikzpicture}
+\end{center}
 \end{frame}
 
 % ============================================================
