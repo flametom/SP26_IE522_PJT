@@ -513,90 +513,44 @@ End-to-end: \textbf{7.5$\times$} single-process. The other 13\% was left untouch
 \end{frame}
 
 % ============================================================
-% SLIDE 8: Engineering ③ --- Per-step recomputation & panic noise
+% SLIDE 8: Gap B --- Running 390 experiments, honestly
 % ============================================================
-\begin{frame}[t,fragile,shrink=5]{Engineering \textcircled{\scriptsize 3}: Per-step recomputation \& panic noise}
+\begin{frame}[t]{Gap B: Running 390 experiments, honestly}
 \footnotesize
 
-\begin{columns}[T,onlytextwidth]
-\column{0.50\textwidth}
-\begin{alertblock}{\small Per-step recomputation is kept}
+\begin{block}{\scriptsize \textcircled{\scriptsize 1}\ Per-step path recomputation}
 \scriptsize
-Paper Section III-C: \emph{``pedestrians rely on up-to-date observations of their immediate surroundings.''}\\[4pt]
-We do NOT cache paths across steps.\\
-Every non-panicked agent's path is recomputed every step against the \emph{current} flow state.\\[4pt]
-This is why the per-step shortest-path cost dominates the profile (slide 7).
-\end{alertblock}
-
-\vspace{0.4em}
-\begin{block}{\scriptsize Panicked agents: \emph{noisy} edge weights}
-\vspace{-0.3em}
-\begin{semiverbatim}\tiny
-def noisy_weight(u, v, data):
-    base = data["length"]
-    return base * (1.0 + rng.exponential(1.0))
-\end{semiverbatim}
-\vspace{-0.3em}
-{\scriptsize Models paper's ``limited observations'' --- panicked agents perceive edge lengths with multiplicative random noise, so their path drifts away from the optimum. Their path is computed per-agent (noise is per-agent), so the batch tree doesn't apply here.}
+\textbf{Paper (Sec.\ III-C):} ``pedestrians rely on up-to-date observations of their immediate surroundings.''\\
+\textbf{We chose:} recompute every step against the current flow state; never cache paths across steps.\\
+\textbf{Because:} caching would decouple agents from live congestion --- violates the paper's own spec and breaks the emergent-queueing behavior.
 \end{block}
 
-\column{0.46\textwidth}
-\begin{block}{\small Edge cases \emph{outside} the batch tree}
+\vspace{0.3em}
+
+\begin{block}{\scriptsize \textcircled{\scriptsize 2}\ Parallel experiment execution}
 \scriptsize
-Three situations keep the per-agent query alive, because agents don't share destinations there:
-\begin{itemize}\itemsep0.15em
-  \item \textbf{Shelter redirect} --- agent just got impacted this step, destination flips from building to nearest shelter
-  \item \textbf{Congestion-aware reroute} --- edge cost temporarily inflated for this agent's detour
-  \item \textbf{Panicked agents} --- noisy weights above
-\end{itemize}
-\scriptsize These are a few percent of calls. The remaining $\sim$95\% hit the shared batch tree and get the 7.5$\times$ speedup.
+\textbf{Paper:} reports single-run wall-time (2.5--22\,h); no parallelism described.\\
+\textbf{We chose:} 8-worker \texttt{multiprocessing} over the seed $\times$ config grid; graph built once in the parent, shared via fork copy-on-write.\\
+\textbf{Because:} 390 runs $\times$ 2.5\,h sequential $=$ \textbf{41 days}. Won't happen in a semester.
 \end{block}
-\end{columns}
+
+\vspace{0.3em}
+
+\begin{block}{\scriptsize \textcircled{\scriptsize 3}\ Controlled RNG streams}
+\scriptsize
+\textbf{Paper:} silent on RNG design.\\
+\textbf{We chose:} 3 independent streams --- human (\texttt{seed}), hazard (\texttt{seed+1000}), sim (\texttt{seed+2000}); hazard stream fixed within a config across all seeds.\\
+\textbf{Because:} without separation, varying $P_{\max}$ also varies hazard placements --- can't tell whether $\Delta RI$ comes from people or from hazards.
+\end{block}
 
 \vspace{0.4em}
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
-\textbf{Algorithms 1 and 2 are unchanged from the paper.}
-Only the \emph{path-computation function} was swapped.}}
+Each row is a question the paper does not ask out loud.\\
+Answering them is the difference between reproduction at scale and a single run.
+}}
 \end{center}
-\end{frame}
 
-% ============================================================
-% SLIDE 9: Engineering ④ --- Multiprocessing + RNG separation
-% ============================================================
-\begin{frame}[t]{Engineering \textcircled{\scriptsize 4}: Parallelism + independent RNG streams}
-\footnotesize
-
-\begin{columns}[T,onlytextwidth]
-\column{0.46\textwidth}
-\begin{block}{\small 8-worker parallelism}
-\scriptsize
-\texttt{multiprocessing.Pool(8)} across seed $\times$ config grid.\\[3pt]
-Network built once in the parent; workers share it via fork copy-on-write.\\[3pt]
-Each worker's run is independent $\Rightarrow \sim 8\times$ extra throughput.
-\end{block}
-
-\vspace{0.4em}
-\begin{alertblock}{\small Why RNG separation matters}
-\scriptsize
-If a single RNG drives humans + hazards + sim dynamics, changing $P_{\max}$ alters the hazard placements \emph{for free}.\\
-$\Rightarrow$ Can't tell whether a higher RI is from more people or from different hazards.
-\end{alertblock}
-
-\column{0.50\textwidth}
-\begin{center}
-\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.85, transform shape]
-  \node[panelbox, fill=lightbluefill, minimum width=5cm, minimum height=0.8cm, align=center] (hu) at (0, 2.5)
-    {Human stream --- \texttt{seed}\\ {\scriptsize origins, destinations, groups}};
-  \node[panelbox, fill=lightredfill, minimum width=5cm, minimum height=0.8cm, align=center] (hz) at (0, 1.0)
-    {Hazard stream --- \texttt{seed+1000}\\ {\scriptsize centers, types, times}};
-  \node[panelbox, fill=lightgreenfill, minimum width=5cm, minimum height=0.8cm, align=center] (sim) at (0, -0.5)
-    {Sim stream --- \texttt{seed+2000}\\ {\scriptsize casualty rolls, panic rolls, random edges}};
-  \node[below=0.3em of sim, font=\scriptsize, align=center, text width=5.5cm]
-    {Hazard stream is \keyterm{fixed} within each config\\ across all seeds $\to$ same scenario,\\ only agent variation.};
-\end{tikzpicture}
-\end{center}
-\end{columns}
 \end{frame}
 
 % ============================================================
