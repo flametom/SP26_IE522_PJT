@@ -37,10 +37,10 @@ def chart_time_distribution():
     y = np.arange(len(sections))
     h = 0.38
     ax.barh(y + h/2, naive_vals, h,
-            label=f"Midterm (per-agent) ({naive['wall_sec']:.0f}s)",
+            label=f"Naïve (per-agent) --- {naive['wall_sec']:.0f}s",
             color="#CC4444")
     ax.barh(y - h/2, opt_vals, h,
-            label=f"Post-midterm (batch tree) ({opt['wall_sec']:.1f}s)",
+            label=f"Ours (batch tree) --- {opt['wall_sec']:.1f}s",
             color="#2E86AB")
 
     ax.set_yticks(y)
@@ -72,7 +72,7 @@ def chart_scaling():
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2))
 
     # Panel 1: single-run wall time
-    modes = ["Midterm\n(per-agent query)", "Post-midterm\n(batch tree)"]
+    modes = ["Naïve\n(per-agent query)", "Ours\n(batch trees)"]
     vals = [naive["wall_sec"], opt["wall_sec"]]
     colors = ["#CC4444", "#2E86AB"]
     bars = ax1.bar(modes, vals, color=colors)
@@ -102,7 +102,7 @@ def chart_scaling():
     ax2.grid(axis="y", alpha=0.3)
 
     speedup = naive["wall_sec"] / opt["wall_sec"]
-    fig.suptitle(f"Post-midterm vs midterm: {speedup:.1f}x single-process "
+    fig.suptitle(f"Ours vs naïve baseline: {speedup:.1f}x single-process "
                  f"(x{N_WORKERS} workers = ~{speedup*N_WORKERS:.0f}x overall)",
                  fontsize=11)
     fig.tight_layout()

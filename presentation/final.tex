@@ -396,18 +396,18 @@ $RI$ = impacted rate, $RS$ = survival rate, $RC$ = casualty rate, $RL$ = leftove
 
 \column{0.46\textwidth}
 \vspace{0.1em}
-\begin{alertblock}{\small Midterm version}
+\begin{alertblock}{\small A na\"ive approach}
 \scriptsize
-Per-agent shortest-path query, one call at a time, in pure Python.\\[3pt]
+Per-agent shortest-path query, one call at a time, pure Python.\\[3pt]
 1 run $\approx$ 5--15 minutes (measured).\\[3pt]
 $\Rightarrow$ 390 runs $\approx$ \textbf{1.5--4 days} of wall time.
 \end{alertblock}
 
 \vspace{0.4em}
-\begin{block}{\small With our optimized pipeline}
+\begin{block}{\small Our implementation}
 \scriptsize
-Same Algorithms 1, 2.\\
-Different \emph{functions} for path computation.\\[3pt]
+Same Algorithms 1, 2 from the paper.\\
+Different \emph{functions} for path computation (slides 7--11).\\[3pt]
 1 run $\approx$ 32 seconds.\\[3pt]
 390 runs $\approx$ \textbf{3.4 hours} (8 workers).
 \end{block}
@@ -448,18 +448,18 @@ Every non-panicked agent triggers its own shortest-path query from its current p
 % ============================================================
 % SLIDE 7: Engineering ② --- scipy batch SSSP
 % ============================================================
-\begin{frame}[t,fragile,shrink=8]{Engineering \textcircled{\scriptsize 2}: From per-agent queries to batch shortest-path trees}
+\begin{frame}[t,fragile,shrink=8]{Engineering \textcircled{\scriptsize 2}: Shared shortest-path trees}
 \footnotesize
 
-\textbf{Midterm baseline:} each agent independently queries the graph for its own shortest path to destination. With 2{,}000 agents $\times$ 121 steps, that is $\sim$200K independent shortest-path queries per run.
+\textbf{Na\"ive approach:} each agent independently queries the graph for its own shortest path to destination. With 2{,}000 agents $\times$ 121 steps, that is $\sim$200K shortest-path calls per run.
 
 \vspace{0.3em}
-\textbf{Post-midterm insight:} many agents share destinations --- the same building, the same shelter. Compute \emph{one} shortest-path \emph{tree} per unique destination; all agents heading there reuse that tree with a constant-time lookup.
+\textbf{Our insight:} many agents share destinations --- the same building, the same shelter. Compute \emph{one} shortest-path \emph{tree} per unique destination; all agents heading there reuse that tree with a constant-time lookup.
 
 \vspace{0.4em}
 \begin{columns}[T,onlytextwidth]
 \column{0.49\textwidth}
-\begin{block}{\scriptsize Midterm (per-agent query)}
+\begin{block}{\scriptsize Na\"ive: one call per agent}
 \vspace{-0.3em}
 \begin{semiverbatim}\tiny
 for p in active_humans:
@@ -471,7 +471,7 @@ $O(N)$ calls per step.
 \end{block}
 
 \column{0.49\textwidth}
-\begin{block}{\scriptsize Post-midterm (batch tree)}
+\begin{block}{\scriptsize Ours: one tree per destination}
 \vspace{-0.3em}
 \begin{semiverbatim}\tiny
 for dest in unique_destinations:
@@ -492,8 +492,8 @@ $O(K)$ calls per step, $K \ll N$.
 \toprule
 & \textbf{Calls / step} & \textbf{Total cost / step} \\
 \midrule
-Per-agent query (midterm) & $O(N)$ & $O(N \cdot (V{+}E) \log V)$ \\
-Batch tree (post-midterm) & $O(K)$ & $O(K \cdot (V{+}E) + V)$ \\
+Na\"ive per-agent query & $O(N)$ & $O(N \cdot (V{+}E) \log V)$ \\
+Our batch trees         & $O(K)$ & $O(K \cdot (V{+}E) + V)$ \\
 \bottomrule
 \end{tabular}}
 \end{center}
@@ -599,7 +599,7 @@ $\Rightarrow$ Can't tell whether a higher RI is from more people or from differe
 % ============================================================
 % SLIDE 10: Engineering ⑤ --- Benchmark results
 % ============================================================
-\begin{frame}[t,shrink=10]{Engineering \textcircled{\scriptsize 5}: Benchmark --- midterm vs post-midterm}
+\begin{frame}[t,shrink=10]{Engineering \textcircled{\scriptsize 5}: Measured speedup}
 \footnotesize
 
 \begin{center}
@@ -609,11 +609,11 @@ $\Rightarrow$ Can't tell whether a higher RI is from more people or from differe
 \vspace{0.2em}
 \begin{columns}[T,onlytextwidth]
 \column{0.48\textwidth}
-\begin{alertblock}{\small Total speedup}
+\begin{alertblock}{\small Our implementation vs a na\"ive baseline}
 \scriptsize
 \textbf{7.5$\times$} single-process end-to-end\\
 \textbf{$\times$ 8 workers $=$ $\sim$60$\times$} overall\\[2pt]
-$\Rightarrow$ 390 runs (8-worker parallel): \\ midterm $\sim$ 2.3 h $\to$ post-midterm $\sim$ 18 min
+$\Rightarrow$ 390 runs (8-worker parallel): \\ na\"ive $\sim$ 2.3 h $\to$ ours $\sim$ 18 min
 \end{alertblock}
 
 \column{0.48\textwidth}
