@@ -419,98 +419,97 @@ $\Rightarrow$ The engineering isn't a side achievement --- it's the prerequisite
 \end{frame}
 
 % ============================================================
-% SLIDE 6: Engineering ① --- Profiling & bottleneck
+% SLIDE 7: Gap A --- Computing paths, 200K+ times per run
 % ============================================================
-\begin{frame}[t]{Engineering \textcircled{\scriptsize 1}: Profiling identifies the bottleneck}
+\begin{frame}[t]{Gap A: Computing paths, 200K+ times per run}
 \footnotesize
 
+% --- Top band: profile chart + why-this-matters ---
 \begin{columns}[T,onlytextwidth]
-\column{0.55\textwidth}
+\column{0.50\textwidth}
 \begin{center}
-\includegraphics[width=0.98\linewidth]{assets/benchmark_time_dist.pdf}
+\includegraphics[width=0.92\linewidth]{assets/benchmark_time_dist.pdf}
 \end{center}
 
-\column{0.42\textwidth}
-\vspace{0.5em}
-\textbf{What dominates?}
-\vspace{0.3em}
-\begin{itemize}\itemsep0.25em
-  \item Flow / state bookkeeping is cheap
-  \item Algorithm 2 (hazard check) is cheap
-  \item \keyterm{Algorithm 1 path recomputation is \textgreater 80\% of runtime}
+\column{0.46\textwidth}
+\vspace{0.2em}
+\textbf{Why this slice matters}
+\vspace{0.2em}
+\begin{itemize}\itemsep0.15em
+  \item Algorithm 1 path recomputation is\\
+        $\approx$\,\keyterm{87\% of a single run}
+  \item 2{,}000 agents $\times$ 121 steps\\
+        $\approx$ \textbf{242K queries / run}
+  \item Pure Python + per-agent calls\\
+        $\Rightarrow$ paper's reported 2.5--22\,h
+  \item Flow bookkeeping, state transitions, hazard checks = other 13\%
 \end{itemize}
-
-\vspace{0.5em}
-\textbf{Root cause:}\\
-Every non-panicked agent triggers its own shortest-path query from its current position, every step, in pure Python.
-
-\vspace{0.5em}
-{\scriptsize\textcolor{gray}{Measured on PSU-UP, Pmax=2000, Hmax=5, $\varepsilon_p$=10\%, seed=42.}}
-\end{columns}
-\end{frame}
-
-% ============================================================
-% SLIDE 7: Engineering ② --- Shared shortest-path trees
-% ============================================================
-\begin{frame}[t,fragile,shrink=8]{Engineering \textcircled{\scriptsize 2}: Shared shortest-path trees}
-\footnotesize
-
-\textbf{Na\"ive approach:} each agent independently queries the graph for its own shortest path to destination. With 2{,}000 agents $\times$ 121 steps, that is $\sim$200K shortest-path calls per run.
-
-\vspace{0.3em}
-\textbf{Our insight:} many agents share destinations --- the same building, the same shelter. Compute \emph{one} shortest-path \emph{tree} per unique destination; all agents heading there reuse that tree with a constant-time lookup.
-
-\vspace{0.4em}
-\begin{columns}[T,onlytextwidth]
-\column{0.49\textwidth}
-\begin{block}{\scriptsize Na\"ive: one call per agent}
-\vspace{-0.3em}
-\begin{semiverbatim}\tiny
-for p in active_humans:
-  path = shortest_path(
-      G, p.src, p.dest)
-\end{semiverbatim}
-\vspace{-0.3em}
-$O(N)$ calls per step.
-\end{block}
-
-\column{0.49\textwidth}
-\begin{block}{\scriptsize Ours: one tree per destination}
-\vspace{-0.3em}
-\begin{semiverbatim}\tiny
-for dest in unique_destinations:
-  tree[dest] = shortest_path_tree(G, dest)
-# each agent: O(1) lookup in tree[p.dest]
-\end{semiverbatim}
-\vspace{-0.3em}
-$O(K)$ calls per step, $K \ll N$.
-\end{block}
 \end{columns}
 
 \vspace{0.4em}
-\begin{columns}[T,onlytextwidth]
-\column{0.55\textwidth}
+
+% --- Middle band: mechanism diagram ---
 \begin{center}
-{\scriptsize
-\begin{tabular}{lcc}
-\toprule
-& \textbf{Calls / step} & \textbf{Total cost / step} \\
-\midrule
-Na\"ive per-agent query & $O(N)$ & $O(N \cdot (V{+}E) \log V)$ \\
-Our batch trees         & $O(K)$ & $O(K \cdot (V{+}E) + V)$ \\
-\bottomrule
-\end{tabular}}
-\end{center}
-{\scriptsize $N$ = active agents; $K$ = unique destinations; $K \ll N$ because many agents share the same building or shelter.}
+\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.88, transform shape]
 
-\column{0.42\textwidth}
-\begin{alertblock}{\scriptsize Speedup}
-\scriptsize
-\textbf{230$\times$} on the path-computation section alone\\
-\textbf{7.5$\times$} single-process end-to-end\\
-(plus: the batch library is compiled C; the per-agent loop was pure Python)
-\end{alertblock}
-\end{columns}
+  % Background graph-G strip
+  \node[draw=gray!40, dashed, rounded corners, fill=lightgrayfill,
+        minimum width=13cm, minimum height=2.4cm] (bg) at (0, 0) {};
+  \node[anchor=north west, font=\tiny, text=gray, inner sep=3pt] at (bg.north west) {Graph $G = (V, E)$};
+
+  % --- Panel A: Per-agent queries (left) ---
+  \node[font=\scriptsize\bfseries, text=highlightblue] at (-4.4, 0.95) {Per-agent queries};
+
+  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (p1) at (-6.2, 0.5) {$p_1$};
+  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (p2) at (-6.2, 0.05) {$p_2$};
+  \node[font=\tiny, text=gray] at (-6.2, -0.38) {$\vdots$};
+  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (pn) at (-6.2, -0.8) {$p_N$};
+
+  \node[panelbox, fill=highlightblue!30, minimum width=1.7cm, minimum height=0.4cm, text width=1.6cm, align=center, inner sep=2pt] (G1) at (-3.0, -0.15) {\scriptsize query $G$};
+
+  \draw[->, thick, darkgray] (p1) -- (G1);
+  \draw[->, thick, darkgray] (p2) -- (G1);
+  \draw[->, thick, darkgray] (pn) -- (G1);
+
+  % --- Panel B: Shared destination trees (right) ---
+  \node[font=\scriptsize\bfseries, text=highlightred] at (4.1, 0.95) {Shared destination trees};
+
+  \node[panelbox, fill=lightredfill, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (d1) at (2.3, 0.55) {$d_1$};
+  \node[panelbox, fill=lightredfill, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (d2) at (3.0, 0.55) {$d_2$};
+  \node[panelbox, fill=lightredfill, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (d3) at (3.7, 0.55) {$d_3$};
+  \node[font=\tiny, text=gray] at (4.4, 0.55) {$\cdots$};
+  \node[panelbox, fill=lightredfill, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (dK) at (5.3, 0.55) {$d_K$};
+
+  \node[panelbox, fill=highlightred!15, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (T1) at (2.3, -0.1) {$T$};
+  \node[panelbox, fill=highlightred!15, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (T2) at (3.0, -0.1) {$T$};
+  \node[panelbox, fill=highlightred!15, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (T3) at (3.7, -0.1) {$T$};
+  \node[font=\tiny, text=gray] at (4.4, -0.1) {$\cdots$};
+  \node[panelbox, fill=highlightred!15, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (TK) at (5.3, -0.1) {$T$};
+
+  \draw[->, thin, darkgray] (d1) -- (T1);
+  \draw[->, thin, darkgray] (d2) -- (T2);
+  \draw[->, thin, darkgray] (d3) -- (T3);
+  \draw[->, thin, darkgray] (dK) -- (TK);
+
+  \node[panelbox, fill=lightbluefill, minimum width=3.4cm, minimum height=0.35cm, text width=3.3cm, align=center, font=\tiny, inner sep=1pt] (agents) at (3.8, -0.85) {agents: $O(1)$ lookup in $T(d_{p_i})$};
+  \draw[->, thin, darkgray, dotted] (T3) -- (agents);
+
+\end{tikzpicture}
+\end{center}
+
+{\scriptsize\textcolor{gray}{Left: 2{,}000 per-agent \texttt{shortest\_path} calls $\times$ 121 steps, pure Python. \hfill Right: $\sim$hundreds of trees $\times$ 121 steps, compiled \texttt{scipy.csgraph}.}}
+
+\vspace{0.4em}
+
+% --- Bottom band: Amdahl bridge ---
+\begin{center}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
+Algorithm 1 recomputation $\approx$ \textbf{87\%} of runtime.
+Our change speeds up that 87\% by $\approx$ \textbf{230$\times$}.\\
+End-to-end: \textbf{7.5$\times$} single-process. The other 13\% was left untouched.
+}}
+\end{center}
+
 \end{frame}
 
 % ============================================================
