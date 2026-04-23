@@ -13,7 +13,7 @@
 \begin{document}
 \maketitle
 
-\noindent\textbf{Structure:} 27 main slides + 5 backup. Framing throughout is paper vs our implementation. No internal-iteration history in what the audience hears.
+\noindent\textbf{Structure:} 25 main slides + 5 backup. Framing throughout is paper vs our implementation. No internal-iteration history in what the audience hears.
 
 \slide{1}{Title}
 \begin{itemize}
@@ -47,162 +47,151 @@
 \item The notation box at top defines every symbol used later.
 \end{itemize}
 
-\slide{6}{Why speed matters}
+\slide{6}{What the paper tells us --- and what it leaves to us}
 \begin{itemize}
-\item Our full experiment is about 390 runs. A straightforward per-agent shortest-path implementation in Python takes 5--15 minutes per run, which is days of wall time for the whole sweep.
-\item Our pipeline runs the same model in about 32 seconds per run, a few hours total with parallel workers. Critically: we did NOT change the algorithms --- only the functions used for path computation.
+\item What the paper specifies about implementation: Python 3.7, Apple M1 Pro with 16 GB RAM, and measured runtime of 2.5 hours at Pmax=2K and 22 hours at Pmax=8K per single run. Algorithms 1 and 2 are decision logic only --- the paper does not say how paths are actually computed.
+\item What the paper leaves silent: shortest-path library, per-step vs cached path policy, parallel execution, RNG design, reproducibility seeding. We had to pick a position on every one.
+\item Key takeaway (bottom box): at the paper's 2.5 h/run, our 390-run experiment would take 41 days of sequential compute. Our pipeline does it in 3.4 hours. The engineering is the prerequisite for every chart in the rest of this deck.
 \end{itemize}
 
-\slide{7}{Engineering 1: Profiling}
+\slide{7}{Gap A: Computing paths, 200K+ times per run}
 \begin{itemize}
-\item The bar chart shows where the time goes. Algorithm 1 path recomputation dominates --- over 80\% of runtime.
-\item Root cause: every non-panicked agent triggers its own shortest-path query from its current position, every step, in pure Python.
+\item Algorithm 1 path recomputation is about 87\% of runtime: 2{,}000 agents across 121 steps is roughly 242K shortest-path queries per run. In pure Python per-agent, this is the paper's reported 2.5--22 hours.
+\item Our fix: many agents share destinations (same buildings, same shelters), so compute one shortest-path tree per unique destination and let agents do an O(1) lookup. Shown in the mechanism diagram: per-agent queries on the left, shared destination trees on the right.
+\item The bottom box is the Amdahl arithmetic: 87\% of runtime sped up by 230x gives 7.5x end-to-end. The other 13\% we left alone.
 \end{itemize}
 
-\slide{8}{Engineering 2: Shared shortest-path trees}
+\slide{8}{Gap B: Running 390 experiments, honestly}
 \begin{itemize}
-\item Key insight: many agents share destinations --- the same building, the same shelter. So compute one shortest-path tree per unique destination; each agent then looks up its route in constant time.
-\item This converts $O(N)$ calls per step into $O(K)$ with $K \ll N$. Measured: about 230x speedup on the path-computation section alone, 7.5x end-to-end single-process.
+\item Three more places the paper is silent, answered with one choice each. Per-step recomputation: the paper says pedestrians act on up-to-date observations, so we never cache paths. Parallel execution: the paper reports a single run, so the 8-worker multiprocessing layer is our addition --- without it, 390 runs at paper pace is 41 days. RNG streams: we split human / hazard / sim into three streams so that varying Pmax does not also vary the hazard scenario.
+\item Bottom box: each row is a question the paper does not ask out loud. Answering them is what makes reproduction-at-scale possible rather than a single run.
 \end{itemize}
 
-\slide{9}{Engineering 3: Per-step recomputation \& panic noise}
+\slide{9}{What this engineering unlocked}
 \begin{itemize}
-\item Per-step recomputation is kept, following the paper --- pedestrians act on up-to-date observations, so paths are not cached across steps.
-\item A few edge cases stay per-agent: shelter redirects, congestion-aware detours, panicked agents with noisy edge weights. These are only a few percent of calls.
-\item The bottom callout is the key message: Algorithms 1 and 2 are unchanged; only the path function was swapped.
+\item 10 seeds per config, all 5 communities validated in parallel, the 17x3 Pmax/Hmax grid for Ext 1, a 6-point Hmax sweep for Ext 2, a 9-point panic grid for Ext 3, three side-by-side comparison animations. Every one of these is finer than what the paper reported.
+\item The gray caption at the bottom mentions the raw speedup --- 7.5x single-process, 60x overall --- but only as evidence. The headline is what the 3.4 hours bought us, not the multiplier on a benchmark.
 \end{itemize}
 
-\slide{10}{Engineering 4: Parallelism + RNG streams}
-\begin{itemize}
-\item Eight parallel workers across the seed--config grid give an extra 8x throughput. The network is built once and shared to workers via copy-on-write.
-\item Separate RNG streams for humans, hazards, and sim dynamics. Without this, changing $P_{\max}$ would also change hazard placements --- we couldn't tell whether a higher $RI$ came from more people or from different hazards.
-\end{itemize}
-
-\slide{11}{Engineering 5: Measured speedup}
-\begin{itemize}
-\item Head-to-head benchmark at the paper's baseline config: 168 seconds per run with per-agent queries, 22 seconds with shared trees. That is 7.5x single-process, about 60x overall with 8 workers.
-\item What this speedup enabled: 10 seeds per config, all 5 communities for Phase 1, three full extensions --- without cutting corners.
-\end{itemize}
-
-\slide{12}{PSU-UP baseline in action}
+\slide{10}{PSU-UP baseline in action}
 \begin{itemize}
 \item Animation on the paper's baseline ($P_{\max}=2{,}000$, $H_{\max}=5$, panic 10\%).
-\item Watch: hazard appears, impacted agents reroute to shelters, some become casualties, the rest arrive. Final $RI$ is about 36\%, matching the Phase 2a chart on slide 15.
+\item Watch: hazard appears, impacted agents reroute to shelters, some become casualties, the rest arrive. Final $RI$ is about 36\%, matching the Phase 2a chart on slide 13.
 \end{itemize}
 
-\slide{13}{Phase 1: Network validation}
+\slide{11}{Phase 1: Network validation}
 \begin{itemize}
 \item Building counts match the paper's Table V within 0--2\% across all five communities.
-\item Edge counts: PSU-UP, UVA-C, VT-B line up. RA-PA and KOP-PA are anomalous --- paper's $E/N$ ratios of 6.5--6.8 are unreproducible with any OSMnx configuration we tried. Treated as a paper data anomaly; details in backup slide 30.
+\item Edge counts: PSU-UP, UVA-C, VT-B line up. RA-PA and KOP-PA are anomalous --- paper's $E/N$ ratios of 6.5--6.8 are unreproducible with any OSMnx configuration we tried. Treated as a paper data anomaly; details in backup slide 28.
 \end{itemize}
 
-\slide{14}{Phase 1: PSU-UP figures}
+\slide{12}{Phase 1: PSU-UP figures}
 \begin{itemize}
 \item Left: Fig.\ 3 reproduction --- walk network with buildings in yellow, shelters in green.
 \item Right: Fig.\ 4 reproduction --- pedestrian flow snapshots at five times during a hazard scenario.
 \end{itemize}
 
-\slide{15}{Phase 2a: $RI$ vs $P_{\max} \times H_{\max}$}
+\slide{13}{Phase 2a: $RI$ vs $P_{\max} \times H_{\max}$}
 \begin{itemize}
 \item Fig.\ 5 reproduction. Our $RI$ sits 2--4\%p above the paper uniformly across all 9 configs.
 \item Critical confirmation: $RI$ is independent of $P_{\max}$ from 2K to 8K (delta under 0.2\%p). This is the paper's core finding, and we reproduced it.
 \end{itemize}
 
-\slide{16}{Phase 2b: $RS / RC / RL$ vs panic}
+\slide{14}{Phase 2b: $RS / RC / RL$ vs panic}
 \begin{itemize}
 \item Fig.\ 6 reproduction with 9 panic points (paper had 5). All three monotonic trends match, with near-exact agreement at the boundary points.
 \item Paper's main conclusion holds: panic is the dominant driver of survival and casualty outcomes.
 \end{itemize}
 
-\slide{17}{Gaps with the paper}
+\slide{15}{Gaps with the paper}
 \begin{itemize}
 \item Four categories of remaining gap, all traced to data the paper did not publish: shelter list, casualty formula, hazard seeds, exact graph preprocessing.
 \item For the shelter gap: we swept the shelter fraction and found 62\% of buildings best matches $RS$ at panic = 90\%. Details in the sensitivity table.
 \end{itemize}
 
-\slide{18}{Three questions we could ask}
+\slide{16}{Three questions we could ask}
 \begin{itemize}
 \item Three questions the paper's range didn't answer, which our faster pipeline lets us tackle.
 \item Paper tested $P_{\max}$ up to 8K, $H_{\max}$ up to 5, panic at 5 points. We push each axis further in the next three slides.
 \end{itemize}
 
-\slide{19}{Extension 1: $P_{\max}$ breakpoint}
+\slide{17}{Extension 1: $P_{\max}$ breakpoint}
 \begin{itemize}
 \item Extended $P_{\max}$ from 2K to 97K across three $H_{\max}$ levels.
 \item Independence holds up to 20K, then breaks at 50K by +8.5\%p.
 \item Mechanism: 969 buildings at 20-person occupancy is about 20K capacity. At 50K we overflow --- agents queue outdoors and get hit by hazards.
 \end{itemize}
 
-\slide{20}{Extension 2: $H_{\max}$ saturation}
+\slide{18}{Extension 2: $H_{\max}$ saturation}
 \begin{itemize}
 \item Extended $H_{\max}$ from 5 to 30 at paper-baseline $P_{\max}$.
 \item $RI$ saturates at about 86\% --- more hazards do not push past this ceiling.
 \item Interpretation: likely about 14\% of the network is structurally unreachable by hazards.
 \end{itemize}
 
-\slide{21}{Extension 3: Finer panic grid}
+\slide{19}{Extension 3: Finer panic grid}
 \begin{itemize}
 \item 9 panic points vs the paper's 5.
 \item Curves are smooth, monotonic, with diminishing marginal effect --- no phase transitions between the paper's measured points.
 \item Policy implication: panic management has highest payoff at low baseline panic.
 \end{itemize}
 
-\slide{22}{Comparison alpha: $P_{\max}$ 2K vs 50K}
+\slide{20}{Comparison alpha: $P_{\max}$ 2K vs 50K}
 \begin{itemize}
 \item Same hazard scenario, different $P_{\max}$. Watch for outdoor queuing in the high-$P_{\max}$ panel.
 \end{itemize}
 
-\slide{23}{Comparison beta: panic 10\% vs 90\%}
+\slide{21}{Comparison beta: panic 10\% vs 90\%}
 \begin{itemize}
 \item Same hazard, different panic rate. High-panic agents wander randomly instead of moving toward shelters.
 \end{itemize}
 
-\slide{24}{Comparison gamma: $H_{\max}$ 5 vs 30}
+\slide{22}{Comparison gamma: $H_{\max}$ 5 vs 30}
 \begin{itemize}
 \item Hazard counts differ by design --- say this explicitly. Left has 5 hazards, right has 30.
 \item Visual: right panel is covered in red, agents hit repeatedly.
 \end{itemize}
 
-\slide{25}{Summary}
+\slide{23}{Summary}
 \begin{itemize}
 \item Reproduction successful within 2--4\%p of the paper across all three phases.
 \item Three novel findings beyond the paper: $P_{\max}$ breakpoint at 50K, $H_{\max}$ saturation near 86\%, smooth diminishing panic effect.
 \item The engineering enabled all of this without changing any paper algorithm --- the six-metric dashboard summarizes the scale.
 \end{itemize}
 
-\slide{26}{Limitations}
+\slide{24}{Limitations}
 \begin{itemize}
 \item Where we focused: faithful paper reproduction, an engineering improvement, and three extensions.
 \item What we left on the table: no agent-model changes, no casualty-formula rewrite, no multi-community extension of Phase 2. The engineering-first stance was deliberate --- a fast pipeline is the prerequisite for any of the agent-side extensions.
 \end{itemize}
 
-\slide{27}{References \& acknowledgements}
+\slide{25}{References \& acknowledgements}
 \begin{itemize}
 \item Acknowledge the primary paper, the 2021 companion paper we used to disambiguate preprocessing, OSMnx, and SciPy.
 \item Code and data on GitHub. Thank the audience; invite questions.
 \end{itemize}
 
-\slide{28}{Backup: Future work}
+\slide{26}{Backup: Future work}
 \begin{itemize}
 \item If asked about future work: the paper's own suggestions --- response agents, social-force, MDP panic model --- plus our own observation that a panic-dependent casualty formula could close the $RC$ ceiling gap.
 \end{itemize}
 
-\slide{29}{Backup: $P_{\max}$ breakpoint generalization}
+\slide{27}{Backup: $P_{\max}$ breakpoint generalization}
 \begin{itemize}
 \item If asked whether the $P_{\max}$ breakpoint is specific to PSU-UP: multi-community $P_{\max}$ data is in this table. Pattern is consistent across communities with different building counts.
 \end{itemize}
 
-\slide{30}{Backup: Edge count anomaly}
+\slide{28}{Backup: Edge count anomaly}
 \begin{itemize}
 \item If asked about the RA-PA and KOP-PA mismatch: this backup has the diagnostic table. Paper reports $E/N$ of 6.5--6.8, which is implausibly high for pedestrian walk networks and unreproducible with any standard OSMnx configuration.
 \end{itemize}
 
-\slide{31}{Backup: Extension candidates considered}
+\slide{29}{Backup: Extension candidates considered}
 \begin{itemize}
 \item If asked why we chose these three extensions: six candidates were considered. The table shows impact, effort, and why each was included or deferred.
 \end{itemize}
 
-\slide{32}{Backup: Static snapshots}
+\slide{30}{Backup: Static snapshots}
 \begin{itemize}
 \item If the venue's PDF viewer does not play the embedded animations: these still frames are the fallback.
 \end{itemize}
