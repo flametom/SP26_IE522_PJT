@@ -426,12 +426,12 @@ $\Rightarrow$ The engineering isn't a side achievement --- it's the prerequisite
 
 % --- Top band: profile chart + why-this-matters ---
 \begin{columns}[T,onlytextwidth]
-\column{0.50\textwidth}
+\column{0.48\textwidth}
 \begin{center}
-\includegraphics[width=0.92\linewidth]{assets/benchmark_time_dist.pdf}
+\includegraphics[width=\linewidth]{assets/benchmark_time_dist.pdf}
 \end{center}
 
-\column{0.46\textwidth}
+\column{0.48\textwidth}
 \vspace{0.2em}
 \textbf{Why this slice matters}
 \vspace{0.2em}
@@ -455,16 +455,16 @@ $\Rightarrow$ The engineering isn't a side achievement --- it's the prerequisite
 
   % Background graph-G strip
   \node[draw=gray!40, dashed, rounded corners, fill=lightgrayfill,
-        minimum width=13cm, minimum height=2.4cm] (bg) at (0, 0) {};
-  \node[anchor=south west, font=\tiny, text=gray, inner sep=1pt] at (bg.north west) {Graph $G = (V, E)$};
+        minimum width=11.5cm, minimum height=2.4cm] (bg) at (0, 0) {};
+  \node[anchor=south, font=\tiny, text=gray, inner sep=1pt] at (bg.north) {Graph $G = (V, E)$};
 
   % --- Panel A: Per-agent queries (left) ---
-  \node[font=\scriptsize\bfseries, text=highlightblue] at (-4.4, 0.95) {Per-agent queries};
+  \node[font=\scriptsize\bfseries, text=highlightblue] at (-4.0, 0.95) {Per-agent queries};
 
-  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (p1) at (-6.2, 0.5) {$p_1$};
-  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (p2) at (-6.2, 0.05) {$p_2$};
-  \node[font=\tiny, text=gray] at (-6.2, -0.38) {$\vdots$};
-  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (pn) at (-6.2, -0.8) {$p_N$};
+  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (p1) at (-5.5, 0.5) {$p_1$};
+  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (p2) at (-5.5, 0.05) {$p_2$};
+  \node[font=\tiny, text=gray] at (-5.5, -0.38) {$\vdots$};
+  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (pn) at (-5.5, -0.8) {$p_N$};
 
   \node[panelbox, fill=highlightblue!30, minimum width=1.7cm, minimum height=0.4cm, text width=1.6cm, align=center, inner sep=2pt] (G1) at (-3.0, -0.15) {\scriptsize query $G$};
 
@@ -517,7 +517,7 @@ End-to-end: 168\,s $\to$ 22.5\,s $\approx$ \textbf{7.5$\times$} single-process.
 % ============================================================
 % SLIDE 8: Gap B --- Running 390 experiments, honestly
 % ============================================================
-\begin{frame}[t]{Gap B: Running 390 experiments, honestly}
+\begin{frame}[t,shrink=15]{Gap B: Running 390 experiments, honestly}
 \footnotesize
 
 \begin{block}{\scriptsize \textcircled{\scriptsize 1}\ Per-step path recomputation}
@@ -602,7 +602,7 @@ Answering them is the difference between reproduction at scale and a single run.
 \begin{columns}[T,onlytextwidth]
 \column{0.52\textwidth}
 \begin{center}
-\animategraphics[poster=30,controls,loop,width=0.7\linewidth]{6}{assets/frames_psuup/sim_}{000}{060}
+\animategraphics[poster=first,controls,loop,width=0.7\linewidth]{6}{assets/frames_psuup/sim_}{000}{060}
 \end{center}
 {\scriptsize\textcolor{gray}{Click play to watch (Adobe Reader). Shown: $t=60$ min frame.}}
 
@@ -683,33 +683,25 @@ See backup slide for diagnostic detail.
 % ============================================================
 % SLIDE 13: Phase 1 --- PSU-UP network + flow
 % ============================================================
-\begin{frame}[t,shrink=10]{Phase 1: PSU-UP network (Fig.\ 3) \& flow snapshots (Fig.\ 4)}
+\begin{frame}[t,shrink=15]{Phase 1: PSU-UP network (Fig.\ 3) \& flow snapshots (Fig.\ 4)}
 \footnotesize
 
-\begin{columns}[T,onlytextwidth]
-\column{0.46\textwidth}
 \begin{center}
-\includegraphics[width=\linewidth]{../results/fig3_network_PSU-UP.png}\\[2pt]
-{\scriptsize \textbf{Fig.\ 3 reproduction} --- PSU-UP walk network\\
-969 buildings, $\sim$600 shelters}
+\includegraphics[height=4.2cm]{../results/fig3_network_PSU-UP.png}
 \end{center}
-
-\column{0.52\textwidth}
-\begin{center}
-\includegraphics[width=\linewidth]{../results/fig4_flow_PSU-UP.png}\\[2pt]
-{\scriptsize \textbf{Fig.\ 4 reproduction} --- pedestrian flow snapshots at $t=0,30,60,90,120$ min}
-\end{center}
+{\centering\scriptsize \textbf{Fig.\ 3 reproduction} --- PSU-UP walk network (969 buildings, $\sim$600 shelters)\par}
 
 \vspace{0.3em}
-{\scriptsize
+\begin{center}
+\includegraphics[width=0.88\linewidth]{../results/fig4_flow_PSU-UP.png}
+\end{center}
+{\centering\scriptsize \textbf{Fig.\ 4 reproduction} --- pedestrian flow snapshots at $t=0,30,60,90,120$ min \quad
 \textcolor{statenormal}{$\bullet$ Normal} \
 \textcolor{statequeuing}{$\bullet$ Queuing} \
 \textcolor{stateimpacted}{$\bullet$ Impacted} \
 \textcolor{statesurvival}{$\bullet$ Survival} \
 \textcolor{statecasualty}{$\times$ Casualty} \
-\textcolor{highlightred}{$\bigcirc$ Hazard}
-}
-\end{columns}
+\textcolor{highlightred}{$\bigcirc$ Hazard}\par}
 
 \vspace{0.4em}
 \begin{center}
@@ -873,7 +865,7 @@ Three questions emerged naturally from the Phase 2 data:
 \begin{tikzpicture}[>=Stealth, font=\footnotesize, scale=0.95, transform shape]
 
   % Question 1: Pmax breakpoint
-  \node[panelbox, fill=lightbluefill, text width=4.2cm, minimum height=3.6cm, align=left] (q1) at (-4.8, 0)
+  \node[panelbox, fill=lightbluefill, text width=4.2cm, minimum height=4.4cm, align=left] (q1) at (-4.8, 0)
     {\textbf{\textcircled{\scriptsize 1} $P_{\max}$ breakpoint}\\[4pt]
      {\scriptsize \textit{Question:} Does $RI$ stay independent of $P_{\max}$ at high populations?}\\[4pt]
      {\scriptsize Paper tested: $P_{\max} \in [2K, 8K]$}\\
@@ -881,7 +873,7 @@ Three questions emerged naturally from the Phase 2 data:
      {\scriptsize \textcolor{highlightred}{\textbf{Finding:} holds $\leq 20K$, \\ breaks at $50K$}}};
 
   % Question 2: Hmax saturation
-  \node[panelbox, fill=lightredfill, text width=4.2cm, minimum height=3.6cm, align=left] (q2) at (0, 0)
+  \node[panelbox, fill=lightredfill, text width=4.2cm, minimum height=4.4cm, align=left] (q2) at (0, 0)
     {\textbf{\textcircled{\scriptsize 2} $H_{\max}$ saturation}\\[4pt]
      {\scriptsize \textit{Question:} Does $RI$ keep growing as we add more hazards?}\\[4pt]
      {\scriptsize Paper tested: $H_{\max} \in [5, 15]$}\\
@@ -889,7 +881,7 @@ Three questions emerged naturally from the Phase 2 data:
      {\scriptsize \textcolor{highlightred}{\textbf{Finding:} saturates at \\ $\sim$86\%, not linear}}};
 
   % Question 3: finer epsilon_p
-  \node[panelbox, fill=lightgreenfill, text width=4.2cm, minimum height=3.6cm, align=left] (q3) at (4.8, 0)
+  \node[panelbox, fill=lightgreenfill, text width=4.2cm, minimum height=4.4cm, align=left] (q3) at (4.8, 0)
     {\textbf{\textcircled{\scriptsize 3} $\varepsilon_p$ resolution}\\[4pt]
      {\scriptsize \textit{Question:} Are there phase transitions between paper's 5 $\varepsilon_p$ points?}\\[4pt]
      {\scriptsize Paper tested: 5 points (20\% spacing)}\\
@@ -1012,7 +1004,7 @@ $\Rightarrow$ Within this model, marginal panic reduction has the largest effect
 \footnotesize
 
 \begin{center}
-\animategraphics[poster=30,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_pmax/cmp_}{000}{060}
+\animategraphics[poster=first,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_pmax/cmp_}{000}{060}
 \end{center}
 
 \vspace{0.3em}
@@ -1026,7 +1018,7 @@ $\Rightarrow$ Within this model, marginal panic reduction has the largest effect
 \footnotesize
 
 \begin{center}
-\animategraphics[poster=30,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_panic/cmp_}{000}{060}
+\animategraphics[poster=first,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_panic/cmp_}{000}{060}
 \end{center}
 
 \vspace{0.3em}
@@ -1040,7 +1032,7 @@ $\Rightarrow$ Within this model, marginal panic reduction has the largest effect
 \footnotesize
 
 \begin{center}
-\animategraphics[poster=30,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_hmax/cmp_}{000}{060}
+\animategraphics[poster=first,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_hmax/cmp_}{000}{060}
 \end{center}
 
 \vspace{0.3em}
@@ -1164,7 +1156,7 @@ We demonstrated the prerequisite; each extension candidate is cataloged in the b
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.8\linewidth}{\centering\small
 \textbf{Thank you.} \\[3pt]
-{\scriptsize Questions? Code and data: \texttt{github.com/flametom/IE522\_PJT}}}}
+{\scriptsize Questions?}}}
 \end{center}
 \end{frame}
 
@@ -1183,41 +1175,31 @@ We demonstrated the prerequisite; each extension candidate is cataloged in the b
 \column{0.5\textwidth}
 \begin{block}{\small From the paper's own discussion}
 \scriptsize
-\begin{itemize}\itemsep0.2em
-  \item \textbf{Response agents}: firefighters, volunteers coordinating evacuation
-  \item \textbf{Social-force models}: physics-based crowd dynamics
-  \item \textbf{MDP panic model}: probabilistic irrationality triggered by evolving hazards
+\begin{itemize}\itemsep0.25em
+  \item \textbf{Response agents}: firefighters, volunteers coordinating evacuation (requires new agent class)
+  \item \textbf{Social-force models}: physics-based crowd dynamics (replaces movement layer)
+  \item \textbf{MDP panic model}: probabilistic irrationality triggered by evolving hazards (replaces panic trigger)
 \end{itemize}
 \end{block}
 
 \column{0.46\textwidth}
 \begin{alertblock}{\small From our own gap analysis}
 \scriptsize
-\begin{itemize}\itemsep0.2em
+\begin{itemize}\itemsep0.25em
   \item \textbf{Panic-dependent casualty}: current model uses distance only; extending to $p_{\text{cas}} \propto \varepsilon_p$ could close the $RC$ ceiling gap at high panic
   \item \textbf{Shelter-location sensitivity}: apply the 62\% fitting method across broader community types
+  \item \textbf{Demographic-specific shelter preference}: deferred (low expected effect on headline metrics)
+  \item \textbf{Hazard-seed sensitivity sweep}: validate plateau / breakpoint claims under different hazard scenarios
 \end{itemize}
 \end{alertblock}
 \end{columns}
 
-\vspace{0.7em}
+\vspace{0.6em}
 \begin{center}
-\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.9, transform shape]
-  % Impact / effort matrix
-  \draw[->, thick] (-5.5, 0) -- (5.5, 0) node[right] {\footnotesize Impact};
-  \draw[->, thick] (-5.5, 0) -- (-5.5, 3.0) node[above] {\footnotesize Effort};
-  \node[font=\tiny, text=gray] at (-2.5, 2.6) {Low impact, high effort};
-  \node[font=\tiny, text=gray] at (2.5, 2.6) {High impact, high effort};
-  \node[font=\tiny, text=gray] at (-2.5, 0.3) {Low impact, low effort};
-  \node[font=\tiny, text=gray] at (2.5, 0.3) {\textbf{Quick wins}};
-  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, inner sep=3pt, font=\scriptsize] at (3.2, 0.9) {Panic-dep.\ casualty};
-  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, inner sep=3pt, font=\scriptsize] at (0.5, 1.8) {Shelter sensitivity};
-  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, inner sep=3pt, font=\scriptsize] at (3.5, 2.3) {Response agents};
-  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, inner sep=3pt, font=\scriptsize] at (-1.8, 2.4) {Social force};
-  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, inner sep=3pt, font=\scriptsize] at (-3.5, 1.3) {MDP panic};
-  \draw[gray, thin] (0, 0) -- (0, 3);
-  \draw[gray, thin] (-5.5, 1.5) -- (5.5, 1.5);
-\end{tikzpicture}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
+The agent-side directions (left) require new classes or a new movement layer.
+The data-side directions (right) plug into the existing pipeline and can be run on the same fast infrastructure.
+}}
 \end{center}
 \end{frame}
 
@@ -1275,34 +1257,7 @@ Edge subdivision, 20m & $\sim$18{,}966 & 115\% \\
 \end{frame}
 
 % ============================================================
-% BACKUP 29: Why not more extensions?
-% ============================================================
-\begin{frame}[t]{Backup: Extension candidates considered}
-\footnotesize
-
-We drafted 6 extension candidates. Selected the 3 already presented. Remaining ideas were scoped out:
-
-\vspace{0.4em}
-{\scriptsize
-\begin{tabular}{p{4.5cm}p{9cm}}
-\toprule
-Candidate & Status \\
-\midrule
-A1: Panic-dependent casualty & Deferred --- addresses the $RC$ ceiling gap at high panic; requires new casualty formula and re-running Phase 2b \\
-A2: Demographic-specific shelter preference & Deferred --- low expected effect on headline metrics \\
-B1: Shelter-location sensitivity study & Partially done (see slide 15) --- extended sweep would strengthen it \\
-C1: Response agents (firefighters, volunteers) & Deferred --- requires new agent class; high implementation cost \\
-C2: Social-force movement model & Deferred --- replaces the whole movement layer \\
-C3: MDP panic model & Deferred --- replaces the panic trigger; out of scope for a course project \\
-\bottomrule
-\end{tabular}}
-
-\vspace{0.4em}
-{\scriptsize\textcolor{gray}{Full write-up: \texttt{Extension\_Candidates\_Detailed.md}.}}
-\end{frame}
-
-% ============================================================
-% BACKUP 30: Static snapshot strips (animation fallback)
+% BACKUP 29: Static snapshot strips (animation fallback)
 % ============================================================
 \begin{frame}[t]{Backup: Static snapshots (animation fallback)}
 \footnotesize
