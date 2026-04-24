@@ -360,9 +360,9 @@ $RI$ = impacted rate, $RS$ = survival rate, $RC$ = casualty rate, $RL$ = leftove
   \draw[transarrow, highlightred] (p2b) -- (ext);
 
   \node[below=0.1em of p1, font=\tiny] {$\sim$5 runs};
-  \node[below=0.1em of p2a, font=\tiny] {90 runs};
+  \node[below=0.1em of p2a, font=\tiny] {300 runs};
   \node[below=0.1em of p2b, font=\tiny] {90 runs};
-  \node[below=0.1em of ext, font=\tiny] {$\sim$210 runs};
+  \node[below=0.1em of ext, font=\tiny] {510 runs (separate)};
 \end{tikzpicture}
 \end{center}
 \end{frame}
@@ -437,12 +437,13 @@ $\Rightarrow$ The engineering isn't a side achievement --- it's the prerequisite
 \vspace{0.2em}
 \begin{itemize}\itemsep0.15em
   \item Algorithm 1 path recomputation is\\
-        $\approx$\,\keyterm{87\% of a single run}
+        $\approx$\,\keyterm{99\% of a single run}\\
+        {\scriptsize (165.9s of 168s, naïve)}
   \item 2{,}000 agents $\times$ 121 steps\\
         $\approx$ \textbf{242K queries / run}
   \item Pure Python + per-agent calls\\
         $\Rightarrow$ paper's reported 2.5--22\,h
-  \item Flow bookkeeping, state transitions, hazard checks = other 13\%
+  \item Flow bookkeeping, state transitions, hazard checks = other 1\%
 \end{itemize}
 \end{columns}
 
@@ -491,7 +492,7 @@ $\Rightarrow$ The engineering isn't a side achievement --- it's the prerequisite
   \draw[->, thin, darkgray] (d3) -- (T3);
   \draw[->, thin, darkgray] (dK) -- (TK);
 
-  \node[panelbox, fill=lightbluefill, minimum width=3.4cm, minimum height=0.35cm, text width=3.3cm, align=center, font=\tiny, inner sep=1pt] (agents) at (3.8, -0.85) {agents: $O(1)$ lookup in $T(d_{p_i})$};
+  \node[panelbox, fill=lightbluefill, minimum width=3.8cm, minimum height=0.35cm, text width=3.7cm, align=center, font=\tiny, inner sep=1pt] (agents) at (3.8, -0.85) {agents: predecessor-tree lookup in $T(d_{p_i})$};
   \draw[->, thin, darkgray, dotted] (T3) -- (agents);
 
 \end{tikzpicture}
@@ -504,9 +505,10 @@ $\Rightarrow$ The engineering isn't a side achievement --- it's the prerequisite
 % --- Bottom band: Amdahl bridge ---
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
-Algorithm 1 recomputation $\approx$ \textbf{87\%} of runtime.
-Our change speeds up that 87\% by $\approx$ \textbf{230$\times$}.\\
-End-to-end: \textbf{7.5$\times$} single-process. The other 13\% was left untouched.
+Per-agent path loop: \textbf{165.9\,s $\to$ 0.7\,s} (algo1 only).
+But shared-tree construction adds \textbf{+19.3\,s} of new overhead.\\
+\textbf{Routing subsystem net: 165.9\,s $\to$ 20.0\,s $\approx$ 8.3$\times$.}
+End-to-end: 168\,s $\to$ 22.5\,s $\approx$ \textbf{7.5$\times$} single-process.
 }}
 \end{center}
 
@@ -539,8 +541,8 @@ End-to-end: \textbf{7.5$\times$} single-process. The other 13\% was left untouch
 \begin{block}{\scriptsize \textcircled{\scriptsize 3}\ Controlled RNG streams}
 \scriptsize
 \textbf{Paper:} silent on RNG design.\\
-\textbf{We chose:} 3 independent streams --- human (\texttt{seed}), hazard (\texttt{seed+1000}), sim (\texttt{seed+2000}); hazard stream fixed within a config across all seeds.\\
-\textbf{Because:} without separation, varying $P_{\max}$ also varies hazard placements --- can't tell whether $\Delta RI$ comes from people or from hazards.
+\textbf{We chose:} agent seeds vary across runs (\texttt{42, 142, 242, \ldots}); \keyterm{hazard seed is fixed at 1135 across the entire sweep}; sim-dynamics seed = agent + 2000.\\
+\textbf{Because:} without separation, varying $P_{\max}$ also varies hazard placements --- can't tell whether $\Delta RI$ comes from people or from hazards. Trade-off: SD reflects agent-level variability \emph{conditional on} the fixed hazard scenario.
 \end{block}
 
 \vspace{0.4em}
@@ -574,7 +576,7 @@ Answering them is the difference between reproduction at scale and a single run.
         {\scriptsize (paper: single run per cfg $\to$ mean $\pm$ SD possible)}
   \item \textbf{Phase 1:} 5 communities validated in parallel
   \item \textbf{Ext 1:} 17 $\times$ 3 $P_{\max}$/$H_{\max}$ grid\\
-        {\scriptsize (paper: 3 $\times$ 3 configs)}
+        {\scriptsize (510 separate runs; paper: 3 $\times$ 3 configs)}
   \item \textbf{Ext 2:} 6-point $H_{\max}$ sweep\\
         {\scriptsize (paper: 3 values)}
   \item \textbf{Ext 3:} 9-point panic grid\\
@@ -722,7 +724,7 @@ By $t=120$ most are \textcolor{statesurvival}{survival/arrival}; panicked stragg
 % ============================================================
 % SLIDE 14: Phase 2a --- RI vs Pmax x Hmax
 % ============================================================
-\begin{frame}[t]{Phase 2a: $RI$ vs $P_{\max} \times H_{\max}$ --- reproduced}
+\begin{frame}[t]{Phase 2a: $RI$ vs $P_{\max} \times H_{\max}$ --- trend reproduced; quantitative gaps remain}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
@@ -755,8 +757,9 @@ paper             & 34.4\% & 54.4\% & 66.2\% \\
 \begin{alertblock}{\scriptsize}
 \scriptsize
 $RI \sim P_{\max}$ \textbf{independence confirmed}\\
-(within $\pm 0.2$\%p across 2K--8K).\\[3pt]
-Paper's core finding reproduced.
+within our impl. ($\Delta RI < 0.2$\%p across 2K--8K, ours).\\[3pt]
+Quantitative match partial:\\
+\textbf{MAE $\approx$ 5\%p, max $\approx$ 9\%p} (Pmax=5K row).
 \end{alertblock}
 \end{columns}
 \end{frame}
@@ -764,7 +767,7 @@ Paper's core finding reproduced.
 % ============================================================
 % SLIDE 15: Phase 2b --- RS/RC/RL vs εp
 % ============================================================
-\begin{frame}[t]{Phase 2b: $RS$ / $RC$ / $RL$ vs $\varepsilon_p$ --- reproduced}
+\begin{frame}[t]{Phase 2b: $RS$ / $RC$ / $RL$ vs $\varepsilon_p$ --- trends reproduced; levels reveal model gaps}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
@@ -793,8 +796,8 @@ $\varepsilon_p$ & $RS$ (ours / paper) & $RC$ (ours / paper) \\
 \vspace{0.3em}
 \begin{alertblock}{\scriptsize}
 \scriptsize
-\textbf{All three trends} ($\varepsilon_p \uparrow$ $\to$ RS$\downarrow$, RC$\uparrow$, RL$\uparrow$) reproduced.\\
-Near-exact match at boundary points (RS 90\%, RC 10/30\%).
+\textbf{Qualitative trends} ($\varepsilon_p \uparrow$ $\to$ RS$\downarrow$, RC$\uparrow$, RL$\uparrow$) reproduced.\\
+Quantitative match partial: $RC$ saturates near \textbf{6\%} in our impl.\ vs paper's \textbf{13.3\%} at high panic.
 \end{alertblock}
 \end{columns}
 \end{frame}
@@ -802,7 +805,7 @@ Near-exact match at boundary points (RS 90\%, RC 10/30\%).
 % ============================================================
 % SLIDE 16: Differences & structurally unresolvable gaps
 % ============================================================
-\begin{frame}[t]{Gaps with the paper \& why they persist}
+\begin{frame}[t]{Calibration choices and remaining gaps}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
@@ -810,24 +813,26 @@ Near-exact match at boundary points (RS 90\%, RC 10/30\%).
 \textbf{What remains off, by 2--10\%p:}
 \vspace{0.2em}
 \begin{itemize}\itemsep0.25em
-  \item $RI$ slightly higher (+2--4\%p)
+  \item $RI$ slightly higher (MAE $\approx$ 5\%p)
   \item $RS$ at low $\varepsilon_p$ lower ($-5$\%p)
   \item $RC$ saturates at $\sim$6\% (paper reaches 13\%)
   \item $RL$ higher ($+5$--$10$\%p)
 \end{itemize}
 
 \vspace{0.4em}
-\textbf{Root causes --- all structurally unresolvable without additional paper data:}
+\textbf{Calibrated assumptions} (held fixed for all subsequent experiments) --- because the paper does not publish:
 \vspace{0.2em}
 \begin{enumerate}\itemsep0.25em
-  \item Paper's \keyterm{shelter list} is unpublished\\
+  \item \keyterm{Shelter list} unpublished\\
         (we fitted 62\% of buildings via sensitivity analysis)
-  \item Paper's \keyterm{casualty formula} is unspecified\\
+  \item \keyterm{Casualty formula} unspecified\\
         (we use a per-step distance-weighted probability)
-  \item Paper's \keyterm{hazard random seed} is unpublished\\
+  \item \keyterm{Hazard random seed} unpublished\\
         (we swept 200 seeds $\to$ 1135 minimizes $RI$ error)
   \item OSM data has evolved since the paper's download
 \end{enumerate}
+\vspace{0.2em}
+{\scriptsize\textcolor{gray}{$\Rightarrow$ Calibrated, then held fixed; not independent validation.}}
 
 \column{0.44\textwidth}
 \begin{alertblock}{\small Shelter sensitivity analysis}
@@ -922,12 +927,10 @@ Confirmed: $P_{\max} \leq 20K$ ($\Delta RI < 0.2$\%p).\\[4pt]
 (+8.5\%p at $H_{\max}$=5).
 \end{block}
 
-\begin{alertblock}{\small Mechanism}
+\begin{alertblock}{\small Mechanism (hypothesis)}
 \scriptsize
-969 buildings $\times \sim 20$ occupancy $\approx$ 20K capacity.\\
-At 50K: $\sim$51 agents/building\\
-$\Rightarrow$ outdoor queuing\\
-$\Rightarrow$ hazard exposure
+At high $P_{\max}$, average agents per building exceeds the \textbf{effective egress capacity} of building$\to$network connectors and nearby walk edges $\to$ outdoor queues $\to$ longer hazard exposure.\\[3pt]
+Building node capacity in our config = 100; effective bottleneck is upstream of that. Connector-capacity sensitivity is future work.
 \end{alertblock}
 
 \vspace{0.3em}
@@ -957,8 +960,8 @@ Saturates at $\sim$86\%: \\{\scriptsize 36\% (Hmax=5) $\to$ 86\% (Hmax=30)}.
 
 \begin{alertblock}{\small Interpretation}
 \scriptsize
-$\sim$14\% of the network remains \emph{structurally unreachable} by hazards regardless of count.\\[4pt]
-Likely peripheral nodes far from any feasible hazard center.
+Under our hazard-generation process, $RI$ approaches an empirical plateau near 86\% by $H_{\max}$=25--30 (verified up to 30).\\[4pt]
+The remaining $\sim$14\% appears to be \emph{low-exposure} or peripheral origins under this scenario; mapping never-impacted nodes is future work.
 \end{alertblock}
 
 \vspace{0.3em}
@@ -985,7 +988,7 @@ Likely peripheral nodes far from any feasible hazard center.
 All three rates ($RS$, $RC$, $RL$) vs $\varepsilon_p$ are:
 \begin{itemize}\itemsep0.1em
   \item smooth and monotonic
-  \item no phase transitions between paper's 5 points
+  \item no abrupt transition at 10\% resolution
   \item \textbf{diminishing marginal} panic effect
 \end{itemize}
 \end{block}
@@ -994,7 +997,7 @@ All three rates ($RS$, $RC$, $RL$) vs $\varepsilon_p$ are:
 \scriptsize
 $RS$ drops $\sim$6\%p per 10\%p $\varepsilon_p$ at low panic,\\
 $\sim$3\%p per 10\%p at high panic.\\[4pt]
-$\Rightarrow$ Panic management has highest impact at \emph{low-baseline} states.
+$\Rightarrow$ Within this model, marginal panic reduction has the largest effect at \emph{low-baseline} panic.
 \end{alertblock}
 
 \vspace{0.3em}
@@ -1058,8 +1061,10 @@ Agent seed = 42 held constant.}
 \scriptsize
 \begin{itemize}\itemsep0.2em
   \item Building counts: \textbf{100--102\%} across 5 communities
-  \item $RI$ within \textbf{2--4\%p} of paper across all 9 configs
-  \item $RS$/$RC$/$RL$ trends fully reproduced
+  \item $RI$ trend reproduced (independent of $P_{\max}$);\\
+        quantitative MAE $\approx$ 5\%p, max $\approx$ 9\%p
+  \item $RS$/$RC$/$RL$ qualitative trends reproduced;\\
+        high-panic $RC$ undershoots paper
   \item Core finding confirmed:\\ \keyterm{$RI \sim P_{\max}$ independence}
 \end{itemize}
 \end{block}
@@ -1079,14 +1084,14 @@ Agent seed = 42 held constant.}
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\footnotesize
 \textbf{Engineering}: 7.5$\times$ single-process speedup (shared shortest-path trees), $\times$8 parallel $\Rightarrow$ 390 runs in a few hours.\\
-Enabled full multi-seed reproduction + 3 extensions without cutting corners on the paper's model.}}
+Enabled multi-seed reproduction + 3 extensions; agent-side decision logic preserved verbatim.}}
 \end{center}
 
 \vspace{0.5em}
 \begin{center}
 \begin{tikzpicture}[font=\footnotesize, scale=0.95, transform shape]
   \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (-6, 0)
-    {\textbf{\large 390}\\ {\tiny sim runs}};
+    {\textbf{\large 905}\\ {\tiny sim runs}};
   \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (-3.5, 0)
     {\textbf{\large 10}\\ {\tiny seeds / config}};
   \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (-1, 0)
@@ -1096,7 +1101,7 @@ Enabled full multi-seed reproduction + 3 extensions without cutting corners on t
   \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (4.0, 0)
     {\textbf{\large 3}\\ {\tiny novel findings}};
   \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (6.5, 0)
-    {\textbf{\large 0}\\ {\tiny algorithm changes}};
+    {\textbf{\large 0}\\ {\tiny new behavioral mechanisms}};
 \end{tikzpicture}
 \end{center}
 \end{frame}
@@ -1248,7 +1253,7 @@ Breakpoint should correlate with building capacity; PSU-UP exhibits it at $\sim$
 \begin{frame}[t]{Backup: Edge count anomaly for RA-PA, KOP-PA}
 \footnotesize
 
-\textbf{Paper's E/N ratios (2021 Table V):} RA-PA 6.47, KOP-PA 6.84. Other communities 1.0--2.6.
+\textbf{Paper's E/N ratios (2024 Table V):} RA-PA 6.47, KOP-PA 6.84. Other communities 1.0--2.6.
 
 \begin{center}
 {\scriptsize
