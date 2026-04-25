@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Extension chart 1: RI vs log(Pmax), Hmax = 5/10/15 overlaid.
-Highlights the breakpoint where RI ~ Pmax independence fails."""
+Highlights the threshold where RI ~ Pmax independence begins to deviate."""
 import glob
 import json
 import os
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     ax.set_xlim(min(all_xs) * 0.85, max(all_xs) * 1.15)
     ax.set_xlabel("Pmax (log scale; major ticks = 2K, 5K, 10K, 20K, 50K, 97K)")
     ax.set_ylabel("RI (%)")
-    ax.set_title("Extension 1: RI vs. Pmax -- independence breaks at extreme populations\n"
+    ax.set_title("Extension 1: RI vs. Pmax -- deviation at high population levels\n"
                  "(PSU-UP, eps_p = 10%, 10-seed mean +/- SD)")
     ax.grid(alpha=0.3)
     ax.legend(loc="lower right")

@@ -15,12 +15,17 @@
 
 % --- Beamer Settings ---
 \setbeamertemplate{navigation symbols}{}
+\newcommand{\mainframenumber}{25}
 \setbeamertemplate{footline}{%
-  \hfill%
-  \usebeamercolor[fg]{page number in head/foot}%
-  \usebeamerfont{page number in head/foot}%
-  \insertframenumber\,/\,\inserttotalframenumber%
-  \kern1em\vskip1em%
+  \ifnum\value{framenumber}>\mainframenumber
+    \vskip1em%
+  \else
+    \hfill%
+    \usebeamercolor[fg]{page number in head/foot}%
+    \usebeamerfont{page number in head/foot}%
+    \insertframenumber\,/\,\mainframenumber%
+    \kern1em\vskip1em%
+  \fi
 }
 \setbeamersize{text margin left=0.55cm, text margin right=0.55cm}
 
@@ -43,6 +48,14 @@
 \newcommand{\keyterm}[1]{\textbf{\textcolor{highlightblue}{#1}}}
 \newcommand{\source}[1]{\par\vspace{-0.15em}{\raggedleft\fontsize{5.4}{6.0}\selectfont\textcolor{gray}{#1}\par}}
 \newcommand{\parambox}[2]{\textcolor{highlightblue}{\textbf{#1}} {\scriptsize--- #2}}
+\newcommand{\simlegend}{\fontsize{6}{6.8}\selectfont
+\textbf{Legend:}
+\textcolor{statenormal}{\textbullet} Normal \,
+\textcolor{statequeuing}{\textbullet} Queuing \,
+\textcolor{stateimpacted}{\textbullet} Impacted \,
+\textcolor{statesurvival}{\textbullet} Survival \,
+\textcolor{statecasualty}{x} Casualty \,
+\textcolor{highlightred}{-- Hazard}}
 
 % --- Style ---
 \setbeamercolor{title}{fg=highlightblue}
@@ -89,7 +102,7 @@
 % ============================================================
 % SLIDE 2: RECAP --- Problem & Motivation (recap from 1st presentation)
 % ============================================================
-\begin{frame}[t,shrink=10]{Recap: Simulating Emergency Evacuation}
+\begin{frame}[t]{Recap: Simulating Emergency Evacuation}
 \small
 
 \begin{columns}[T,onlytextwidth]
@@ -99,22 +112,19 @@
 Thousands of pedestrians must evacuate simultaneously.
 
 \vspace{0.6em}
-\begin{block}{What makes this hard to simulate?}
+\begin{block}{Modeling challenges}
 \footnotesize
-\begin{itemize}\itemsep0.3em
-  \item Each person decides \keyterm{independently} --- where to go, which route to take
-  \item Decisions depend on \keyterm{local information}: is this road congested? Am I near the hazard?
-  \item \keyterm{Panic} causes irrational behavior --- random routing instead of shortest path
-  \item Congestion is \keyterm{emergent} --- it arises from many individual decisions, not a global rule
+\begin{itemize}\itemsep0.35em
+  \item Agents decide \keyterm{independently}
+  \item Decisions use \keyterm{local information}: congestion, hazard proximity
+  \item \keyterm{Panic} and congestion create emergent system behavior
 \end{itemize}
 \end{block}
 
-\vspace{0.3em}
-\begin{alertblock}{}
-\footnotesize
-A traditional process-flow model cannot capture this.\\
-$\Rightarrow$ We need \textbf{Agent-Based Simulation}: model each pedestrian as an autonomous agent with its own state, position, speed, and decision logic.
-\end{alertblock}
+\vspace{0.45em}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\footnotesize
+The paper therefore uses \textbf{Agent-Based Simulation}: one autonomous pedestrian per agent.
+}}
 
 \column{0.42\textwidth}
 \vspace{0.5em}
@@ -222,14 +232,14 @@ $\Rightarrow$ We need \textbf{Agent-Based Simulation}: model each pedestrian as 
 % ============================================================
 % SLIDE 4: RECAP --- Agents + 6 states + Algorithms 1/2
 % ============================================================
-\begin{frame}[t,shrink=5]{Recap: Agent States \& Algorithms 1--2}
+\begin{frame}[t]{Recap: Agent States \& Algorithms 1--2}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
 \column{0.46\textwidth}
 \textbf{Human agent is defined by:}
 \vspace{0.2em}
-\begin{itemize}\itemsep0.2em
+\begin{itemize}\itemsep0.25em
   \item \parambox{Position}{current node or edge}
   \item \parambox{Destination}{building (normal) or shelter (after impact)}
   \item \parambox{Speed}{72--96 m/min by age}
@@ -237,22 +247,14 @@ $\Rightarrow$ We need \textbf{Agent-Based Simulation}: model each pedestrian as 
   \item \parambox{Panic $\varepsilon_p$}{probability of irrational routing}
 \end{itemize}
 
-\vspace{0.3em}
-\begin{block}{\scriptsize Algorithm 2 --- Human$\leftrightarrow$Hazard (every step)}
+\vspace{0.45em}
+\begin{block}{\scriptsize Per-step updates from Algorithms 1--2}
 \scriptsize
-\begin{enumerate}\itemsep0.05em
-  \item Inside hazard \& first impact $\to$ \textcolor{stateimpacted}{Impacted} + reroute to shelter
-  \item Casualty check (higher prob near center)
-  \item Panic check (irreversible, $\varepsilon_p \times$ group rate)
-\end{enumerate}
-\end{block}
-
-\begin{block}{\scriptsize Algorithm 1 --- Human$\leftrightarrow$Network (every step)}
-\scriptsize
-\begin{enumerate}\itemsep0.05em
-  \item On edge $\to$ check edge congestion: queue or continue
-  \item At node $\to$ reroute, queue, or random (panic)
-\end{enumerate}
+\begin{itemize}\itemsep0.25em
+  \item Hazard exposure: impact, casualty, panic
+  \item Network movement: route, queue, reroute
+  \item Panic agent: random route choice is irreversible
+\end{itemize}
 \end{block}
 
 \column{0.52\textwidth}
@@ -284,8 +286,7 @@ $\Rightarrow$ We need \textbf{Agent-Based Simulation}: model each pedestrian as 
 
 \vspace{0.2em}
 {\scriptsize
-\textbf{Key insight:} Once \textcolor{stateimpacted}{Impacted}, destination changes from building to nearest \textcolor{statesurvival}{shelter}.
-Panic is \textbf{irreversible}.}
+\textbf{Key insight:} once \textcolor{stateimpacted}{Impacted}, the destination changes from building to nearest \textcolor{statesurvival}{shelter}.}
 
 \end{columns}
 \source{Shi et al.\ (2024), Section III, Tables II--III}
@@ -294,55 +295,54 @@ Panic is \textbf{irreversible}.}
 % ============================================================
 % SLIDE 4: Reproduction scope
 % ============================================================
-\begin{frame}[t]{What we reproduced \& extended}
+\begin{frame}[t]{Reproduction and extension scope}
 \footnotesize
 
 \begin{center}
 \fcolorbox{gray!50}{gray!8}{\parbox{0.95\linewidth}{\scriptsize
-\textbf{Notation (from the paper):}
-$P_{\max}$ = max pedestrians per run \quad
-$H_{\max}$ = number of hazard events per run \quad
-$\varepsilon_p$ = background panic rate
-\\
-$RI$ = impacted rate, $RS$ = survival rate, $RC$ = casualty rate, $RL$ = leftover (stuck in hazard) rate.
+\textbf{Notation (from the paper):}\\[-0.1em]
+$P_{\max}$: max pedestrians/run \quad
+$H_{\max}$: hazard events/run \quad
+$\varepsilon_p$: background panic rate\\
+$RI$: impacted rate \quad
+$RS$: survival rate \quad
+$RC$: casualty rate \quad
+$RL$: leftover rate
 }}
 \end{center}
 
-\vspace{0.4em}
+\vspace{0.35em}
 \begin{columns}[T,onlytextwidth]
 \column{0.48\textwidth}
 \begin{block}{\small Paper reproduction targets}
 \scriptsize
-\begin{itemize}\itemsep0.2em
+\begin{itemize}\itemsep0.25em
   \item \textbf{Phase 1} --- Table V, Fig.\ 3--4:\\
-        networks for \textbf{5 communities}\\
-        (PSU-UP, UVA-C, VT-B, RA-PA, KOP-PA)
+        networks for \textbf{5 communities}
   \item \textbf{Phase 2a} --- Fig.\ 5:\\
-        $RI$ vs $P_{\max} \times H_{\max}$\\
-        (9 configs, $\varepsilon_p = 10\%$)
+        $RI$ vs $P_{\max} \times H_{\max}$
   \item \textbf{Phase 2b} --- Fig.\ 6:\\
-        $RS / RC / RL$ vs $\varepsilon_p$\\
-        (5 paper points)
+        $RS / RC / RL$ vs $\varepsilon_p$
 \end{itemize}
 \end{block}
 
 \column{0.48\textwidth}
-\begin{alertblock}{\small Our extensions (beyond the paper)}
+\begin{alertblock}{\small Extension studies (beyond the paper)}
 \scriptsize
-\begin{itemize}\itemsep0.2em
-  \item \textbf{Ext.\ \textcircled{\scriptsize 1}} $P_{\max}$ \textbf{2K $\to$ 97K}\\
-        (paper tested 2K--8K) --- breakpoint
-  \item \textbf{Ext.\ \textcircled{\scriptsize 2}} $H_{\max}$ \textbf{5 $\to$ 30}\\
-        (paper tested 5--15) --- saturation
-  \item \textbf{Ext.\ \textcircled{\scriptsize 3}} $\varepsilon_p$ \textbf{finer grid}\\
-        (9 points vs paper's 5)
+\begin{itemize}\itemsep0.25em
+  \item \textbf{Ext.\ 1} $P_{\max}$ \textbf{2K $\to$ 97K}\\
+        threshold beyond the paper range
+  \item \textbf{Ext.\ 2} $H_{\max}$ \textbf{5 $\to$ 30}\\
+        empirical plateau check
+  \item \textbf{Ext.\ 3} $\varepsilon_p$ \textbf{finer grid}\\
+        smoother panic-response curve
 \end{itemize}
 \end{alertblock}
-\vspace{0.3em}
-{\scriptsize 10 seeds per config; mean $\pm$ SD reported throughout.}
+\vspace{0.25em}
+{\scriptsize Grid results use 10 agent seeds; hazard seed fixed for controlled comparisons.}
 \end{columns}
 
-\vspace{0.6em}
+\vspace{0.45em}
 \begin{center}
 \begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.95, transform shape]
   % Pipeline of phases
@@ -362,20 +362,20 @@ $RI$ = impacted rate, $RS$ = survival rate, $RC$ = casualty rate, $RL$ = leftove
   \node[below=0.1em of p1, font=\tiny] {$\sim$5 runs};
   \node[below=0.1em of p2a, font=\tiny] {300 runs};
   \node[below=0.1em of p2b, font=\tiny] {90 runs};
-  \node[below=0.1em of ext, font=\tiny] {510 runs (separate)};
+  \node[below=0.1em of ext, font=\tiny] {510-run sweep + checks};
 \end{tikzpicture}
 \end{center}
 \end{frame}
 
 % ============================================================
-% SLIDE 6: What the paper tells us --- and what it leaves to us
+% SLIDE 6: Implementation details specified and unspecified in the paper
 % ============================================================
-\begin{frame}[t]{What the paper tells us --- and what it leaves to us}
+\begin{frame}[t]{Implementation specifications and reproducibility gaps}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
 \column{0.48\textwidth}
-\begin{block}{\small What the paper specifies}
+\begin{block}{\small Specified in the paper}
 \scriptsize
 \begin{itemize}\itemsep0.25em
   \item Python 3.7 environment
@@ -390,7 +390,7 @@ $RI$ = impacted rate, $RS$ = survival rate, $RC$ = casualty rate, $RL$ = leftove
 \end{block}
 
 \column{0.48\textwidth}
-\begin{alertblock}{\small What the paper leaves silent}
+\begin{alertblock}{\small Unspecified implementation details}
 \scriptsize
 \begin{itemize}\itemsep0.25em
   \item Shortest-path library / algorithm
@@ -406,159 +406,101 @@ $RI$ = impacted rate, $RS$ = survival rate, $RC$ = casualty rate, $RL$ = leftove
 \vspace{0.6em}
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
-At the paper's 2.5\,h/run, reproducing our \textbf{390-run experiment} would take $\sim$\,\textbf{41 days} of sequential compute.\\
+At the paper's 2.5\,h/run, our \textbf{390-run core grid} would take $\sim$\,\textbf{41 days} of sequential compute.\\
 Our engineered pipeline does it in \textbf{3.4 hours}.\\[2pt]
-$\Rightarrow$ The engineering isn't a side achievement --- it's the prerequisite for every chart in the rest of this deck.
+$\Rightarrow$ The implementation work is a prerequisite for the reproduction and extension results that follow.
 }}
 \end{center}
-
-\vspace{0.3em}
-{\scriptsize\textcolor{gray}{Hardware comparison is indicative --- Apple M1 Pro is a reasonably fast chip; most of the gap is algorithmic, not hardware.}}
 
 \source{Shi et al.\ (2024), p.\ 379}
 \end{frame}
 
 % ============================================================
-% SLIDE 7: Gap A --- Computing paths, 200K+ times per run
+% SLIDE 7: Computational bottleneck in path computation
 % ============================================================
-\begin{frame}[t,shrink=10]{Gap A: Computing paths, 200K+ times per run}
+\begin{frame}[t]{Computational bottleneck: repeated path computation}
 \footnotesize
 
-% --- Top band: profile chart + why-this-matters ---
 \begin{columns}[T,onlytextwidth]
-\column{0.48\textwidth}
+\column{0.52\textwidth}
 \begin{center}
-\includegraphics[width=\linewidth]{assets/benchmark_time_dist.pdf}
+\includegraphics[width=0.96\linewidth]{assets/benchmark_time_dist.pdf}
 \end{center}
+{\centering\scriptsize Baseline single run: 168s total, 165.9s in path queries.\par}
 
-\column{0.48\textwidth}
-\vspace{0.2em}
-\textbf{Why this slice matters}
-\vspace{0.2em}
-\begin{itemize}\itemsep0.15em
-  \item Algorithm 1 path recomputation is\\
-        $\approx$\,\keyterm{99\% of a single run}\\
-        {\scriptsize (165.9s of 168s, naïve)}
-  \item 2{,}000 agents $\times$ 121 steps\\
-        $\approx$ \textbf{242K queries / run}
-  \item Pure Python + per-agent calls\\
-        $\Rightarrow$ paper's reported 2.5--22\,h
-  \item Flow bookkeeping, state transitions, hazard checks = other 1\%
+\column{0.44\textwidth}
+\begin{block}{\small Per-agent path computation}
+\scriptsize
+\begin{itemize}\itemsep0.25em
+  \item 2{,}000 agents $\times$ 121 steps
+  \item $\sim$242K path queries / run
+  \item Same graph traversed repeatedly
 \end{itemize}
+\end{block}
+
+\vspace{0.45em}
+\begin{alertblock}{\small Shared destination trees}
+\scriptsize
+\begin{itemize}\itemsep0.25em
+  \item Group agents by destination
+  \item Build one tree per destination
+  \item Reconstruct each agent's path from that tree
+\end{itemize}
+\end{alertblock}
 \end{columns}
 
-\vspace{0.4em}
+\vspace{0.7em}
 
-% --- Middle band: mechanism diagram ---
 \begin{center}
-\begin{tikzpicture}[>=Stealth, font=\scriptsize, scale=0.88, transform shape]
-
-  % Background graph-G strip
-  \node[draw=gray!40, dashed, rounded corners, fill=lightgrayfill,
-        minimum width=11.5cm, minimum height=2.4cm] (bg) at (0, 0) {};
-  \node[anchor=south, font=\tiny, text=gray, inner sep=1pt] at (bg.north) {Graph $G = (V, E)$};
-
-  % --- Panel A: Per-agent queries (left) ---
-  \node[font=\scriptsize\bfseries, text=highlightblue] at (-4.0, 0.95) {Per-agent queries};
-
-  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (p1) at (-5.5, 0.5) {$p_1$};
-  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (p2) at (-5.5, 0.05) {$p_2$};
-  \node[font=\tiny, text=gray] at (-5.5, -0.38) {$\vdots$};
-  \node[panelbox, fill=lightbluefill, minimum width=0.55cm, minimum height=0.35cm, text width=0.45cm, align=center, inner sep=1pt] (pn) at (-5.5, -0.8) {$p_N$};
-
-  \node[panelbox, fill=highlightblue!30, minimum width=1.7cm, minimum height=0.4cm, text width=1.6cm, align=center, inner sep=2pt] (G1) at (-3.0, -0.15) {\scriptsize query $G$};
-
-  \draw[->, thick, darkgray] (p1) -- (G1);
-  \draw[->, thick, darkgray] (p2) -- (G1);
-  \draw[->, thick, darkgray] (pn) -- (G1);
-
-  % --- Panel B: Shared destination trees (right) ---
-  \node[font=\scriptsize\bfseries, text=highlightred] at (4.1, 0.95) {Shared destination trees};
-
-  \node[panelbox, fill=lightredfill, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (d1) at (2.3, 0.55) {$d_1$};
-  \node[panelbox, fill=lightredfill, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (d2) at (3.0, 0.55) {$d_2$};
-  \node[panelbox, fill=lightredfill, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (d3) at (3.7, 0.55) {$d_3$};
-  \node[font=\tiny, text=gray] at (4.4, 0.55) {$\cdots$};
-  \node[panelbox, fill=lightredfill, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (dK) at (5.3, 0.55) {$d_K$};
-
-  \node[panelbox, fill=highlightred!15, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (T1) at (2.3, -0.1) {$T$};
-  \node[panelbox, fill=highlightred!15, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (T2) at (3.0, -0.1) {$T$};
-  \node[panelbox, fill=highlightred!15, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (T3) at (3.7, -0.1) {$T$};
-  \node[font=\tiny, text=gray] at (4.4, -0.1) {$\cdots$};
-  \node[panelbox, fill=highlightred!15, minimum width=0.45cm, minimum height=0.35cm, text width=0.35cm, align=center, inner sep=1pt] (TK) at (5.3, -0.1) {$T$};
-
-  \draw[->, thin, darkgray] (d1) -- (T1);
-  \draw[->, thin, darkgray] (d2) -- (T2);
-  \draw[->, thin, darkgray] (d3) -- (T3);
-  \draw[->, thin, darkgray] (dK) -- (TK);
-
-  \node[panelbox, fill=lightbluefill, minimum width=3.8cm, minimum height=0.35cm, text width=3.7cm, align=center, font=\tiny, inner sep=1pt] (agents) at (3.8, -0.85) {agents: predecessor-tree lookup in $T(d_{p_i})$};
-  \draw[->, thin, darkgray, dotted] (T3) -- (agents);
-
-\end{tikzpicture}
-\end{center}
-
-{\scriptsize\textcolor{gray}{Left: 2{,}000 per-agent \texttt{shortest\_path} calls $\times$ 121 steps, pure Python. \hfill Right: $\sim$hundreds of trees $\times$ 121 steps, compiled \texttt{scipy.csgraph}.}}
-
-\vspace{0.4em}
-
-% --- Bottom band: Amdahl bridge ---
-\begin{center}
-\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
-Per-agent path loop: \textbf{165.9\,s $\to$ 0.7\,s} (algo1 only).
-But shared-tree construction adds \textbf{+19.3\,s} of new overhead.\\
-\textbf{Routing subsystem net: 165.9\,s $\to$ 20.0\,s $\approx$ 8.3$\times$.}
-End-to-end: 168\,s $\to$ 22.5\,s $\approx$ \textbf{7.5$\times$} single-process.
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.88\linewidth}{\centering\footnotesize
+\textbf{Routing subsystem}: 165.9s $\to$ 20.0s ($\approx$8.3$\times$). \qquad
+\textbf{End-to-end}: 168s $\to$ 22.5s ($\approx$7.5$\times$).
 }}
 \end{center}
 
 \end{frame}
 
 % ============================================================
-% SLIDE 8: Gap B --- Running 390 experiments, honestly
+% SLIDE 8: Experimental design and reproducibility
 % ============================================================
-\begin{frame}[t,shrink=15]{Gap B: Running 390 experiments, honestly}
+\begin{frame}[t]{Experimental design for scalable reproduction}
 \footnotesize
 
-\begin{block}{\scriptsize \textcircled{\scriptsize 1}\ Per-step path recomputation}
+\begin{block}{\scriptsize 1. Per-step path recomputation}
 \scriptsize
-\textbf{Paper (Sec.\ III-C):} ``pedestrians rely on up-to-date observations of their immediate surroundings.''\\
-\textbf{We chose:} recompute every step against the current flow state; never cache paths across steps.\\
-\textbf{Because:} caching would decouple agents from live congestion --- violates the paper's own spec and breaks the emergent-queueing behavior.
+\textbf{Implementation decision:} recompute paths every step; no cross-step path caching.\\
+\textbf{Rationale:} agents must react to live congestion, otherwise queues stop being emergent.
 \end{block}
 
 \vspace{0.3em}
 
-\begin{block}{\scriptsize \textcircled{\scriptsize 2}\ Parallel experiment execution}
+\begin{block}{\scriptsize 2. Parallel experiment execution}
 \scriptsize
-\textbf{Paper:} reports single-run wall-time (2.5--22\,h); no parallelism described.\\
-\textbf{We chose:} 8-worker \texttt{multiprocessing} over the seed $\times$ config grid; graph built once in the parent, shared via fork copy-on-write.\\
-\textbf{Because:} 390 runs $\times$ 2.5\,h sequential $=$ \textbf{41 days}. Won't happen in a semester.
+\textbf{Implementation decision:} run the seed $\times$ config grid with 8 workers.\\
+\textbf{Rationale:} 390 runs at the paper's 2.5\,h/run baseline would require \textbf{41 days}; the grid finished in \textbf{3.4 hours}.
 \end{block}
 
 \vspace{0.3em}
 
-\begin{block}{\scriptsize \textcircled{\scriptsize 3}\ Controlled RNG streams}
+\begin{block}{\scriptsize 3. Controlled RNG streams}
 \scriptsize
-\textbf{Paper:} silent on RNG design.\\
-\textbf{We chose:} agent seeds vary across runs (\texttt{42, 142, 242, \ldots}); \keyterm{hazard seed is fixed at 1135 across the entire sweep}; sim-dynamics seed = agent + 2000.\\
-\textbf{Because:} without separation, varying $P_{\max}$ also varies hazard placements --- can't tell whether $\Delta RI$ comes from people or from hazards. Trade-off: SD reflects agent-level variability \emph{conditional on} the fixed hazard scenario.
+\textbf{Implementation decision:} vary agent seeds; keep hazard seed fixed at 1135.\\
+\textbf{Rationale:} changes in $P_{\max}$ or $\varepsilon_p$ should not also change the hazard scenario.
 \end{block}
 
 \vspace{0.4em}
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
-Each row is a question the paper does not ask out loud.\\
-Answering them is the difference between reproduction at scale and a single run.
+These implementation decisions preserve the behavioral logic while making multi-seed reproduction feasible.
 }}
 \end{center}
 
 \end{frame}
 
 % ============================================================
-% SLIDE 9: What this engineering unlocked
+% SLIDE 9: Experimental scale enabled by implementation
 % ============================================================
-\begin{frame}[t]{What this engineering unlocked}
+\begin{frame}[t]{Experimental scale enabled by the implementation}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
@@ -569,73 +511,60 @@ Answering them is the difference between reproduction at scale and a single run.
 
 \column{0.40\textwidth}
 \vspace{0.2em}
-\textbf{What the 3.4 hours bought us}
+\textbf{Experimental capacity}
 \vspace{0.3em}
 \begin{itemize}\itemsep0.3em
   \item \textbf{10 seeds / config}\\
-        {\scriptsize (paper: single run per cfg $\to$ mean $\pm$ SD possible)}
-  \item \textbf{Phase 1:} 5 communities validated in parallel
-  \item \textbf{Ext 1:} 17 $\times$ 3 $P_{\max}$/$H_{\max}$ grid\\
-        {\scriptsize (510 separate runs; paper: 3 $\times$ 3 configs)}
-  \item \textbf{Ext 2:} 6-point $H_{\max}$ sweep\\
-        {\scriptsize (paper: 3 values)}
-  \item \textbf{Ext 3:} 9-point panic grid\\
-        {\scriptsize (paper: 5 values)}
-  \item \textbf{3 side-by-side animations}\\
-        {\scriptsize (paper: static figures only)}
+        {\scriptsize mean $\pm$ SD instead of single-run claims}
+  \item \textbf{390-run core grid}\\
+        {\scriptsize reproduction + controlled uncertainty}
+  \item \textbf{510-run $P_{\max}$ sweep}\\
+        {\scriptsize extension far beyond the paper range}
+  \item \textbf{3 visual comparisons}\\
+        {\scriptsize animations for mechanism checks}
 \end{itemize}
 \end{columns}
 
 \vspace{0.5em}
 \begin{center}
-{\scriptsize\textcolor{gray}{Measured speedup: 7.5$\times$ single-process, 60$\times$ overall with 8 workers. The number is a means; the end is making 390 runs affordable.}}
+{\scriptsize\textcolor{gray}{Measured speedup: 7.5$\times$ single-process; about 60$\times$ with 8-worker grid execution.}}
 \end{center}
 
 \end{frame}
 
 % ============================================================
-% SLIDE 11: E --- Real PSU-UP animation (replaces 1차 toy)
+% SLIDE 11: PSU-UP baseline simulation
 % ============================================================
-\begin{frame}[t]{PSU-UP baseline in action --- real network, real agents}
+\begin{frame}[t]{Baseline PSU-UP simulation on the reproduced network}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
 \column{0.52\textwidth}
 \begin{center}
-\animategraphics[poster=first,controls,loop,width=0.7\linewidth]{6}{assets/frames_psuup/sim_}{000}{060}
+\animategraphics[poster=first,controls,loop,width=0.64\linewidth]{6}{assets/frames_psuup/sim_}{000}{060}\\[-0.2em]
+{\parbox{0.98\linewidth}{\centering\simlegend}}
 \end{center}
-{\scriptsize\textcolor{gray}{Click play to watch (Adobe Reader). Shown: $t=60$ min frame.}}
 
 \column{0.45\textwidth}
 \vspace{0.1em}
-\textbf{Configuration:}
+\textbf{Baseline configuration}
 \scriptsize
 \begin{itemize}\itemsep0.15em
   \item PSU-UP (969 buildings, $\sim$600 shelters)
-  \item $P_{\max}$ = 2{,}000 pedestrians
-  \item $H_{\max}$ = 5 hazard events
-  \item $\varepsilon_p$ = 10\% (background panic)
+  \item $P_{\max}$ = 2{,}000, $H_{\max}$ = 5
+  \item $\varepsilon_p$ = 10\%
   \item Hazard seed = 1135, agent seed = 42
 \end{itemize}
 
-\vspace{0.5em}
-\textbf{Outcome at $t=120$ min:}
+\vspace{0.35em}
+\textbf{Outcome at $t=120$ min}
 \scriptsize
 \begin{itemize}\itemsep0.1em
   \item $RI \approx 36\%$ (impacted)
   \item $RS \approx 92\%$ (survival)
   \item $RC \approx 2\%$ (casualty)
-  \item Matches paper's Fig.\ 5 within 2\%p (see slides 13--14).
 \end{itemize}
 
-\vspace{0.5em}
-{\scriptsize\textbf{Legend:}\\
-\textcolor{statenormal}{$\bullet$ Normal} \
-\textcolor{statequeuing}{$\bullet$ Queuing} \
-\textcolor{stateimpacted}{$\bullet$ Impacted} \
-\textcolor{statesurvival}{$\bullet$ Survival} \
-\textcolor{statecasualty}{$\times$ Casualty} \
-\textcolor{highlightred}{--~Hazard}}
 \end{columns}
 \end{frame}
 
@@ -683,34 +612,34 @@ See backup slide for diagnostic detail.
 % ============================================================
 % SLIDE 13: Phase 1 --- PSU-UP network + flow
 % ============================================================
-\begin{frame}[t,shrink=15]{Phase 1: PSU-UP network (Fig.\ 3) \& flow snapshots (Fig.\ 4)}
+\begin{frame}[t]{Phase 1: PSU-UP network (Fig.\ 3) \& flow snapshots (Fig.\ 4)}
 \footnotesize
 
+\begin{columns}[T,onlytextwidth]
+\column{0.36\textwidth}
 \begin{center}
-\includegraphics[height=4.2cm]{../results/fig3_network_PSU-UP.png}
+\includegraphics[height=2.25cm]{../results/fig3_network_PSU-UP.png}\\[-0.25em]
+{\scriptsize \textbf{Fig.\ 3}: PSU-UP network}
 \end{center}
-{\centering\scriptsize \textbf{Fig.\ 3 reproduction} --- PSU-UP walk network (969 buildings, $\sim$600 shelters)\par}
 
-\vspace{0.3em}
-\begin{center}
-\includegraphics[width=0.88\linewidth]{../results/fig4_flow_PSU-UP.png}
-\end{center}
-{\centering\scriptsize \textbf{Fig.\ 4 reproduction} --- pedestrian flow snapshots at $t=0,30,60,90,120$ min \quad
-\textcolor{statenormal}{$\bullet$ Normal} \
-\textcolor{statequeuing}{$\bullet$ Queuing} \
-\textcolor{stateimpacted}{$\bullet$ Impacted} \
-\textcolor{statesurvival}{$\bullet$ Survival} \
-\textcolor{statecasualty}{$\times$ Casualty} \
-\textcolor{highlightred}{$\bigcirc$ Hazard}\par}
-
+\column{0.58\textwidth}
 \vspace{0.4em}
+\begin{block}{\small Validation criteria}
+\scriptsize
+\begin{itemize}\itemsep0.12em
+  \item 969 building nodes, matching paper count within 2\%
+  \item Shelter supplementation fixed before all later experiments
+  \item Same network used for the flow snapshots below
+\end{itemize}
+\end{block}
+\end{columns}
+
+\vspace{0.15em}
 \begin{center}
-\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
-At $t=0$ agents are at origin buildings (blue).
-Hazard emerges at $t\approx 4\text{--}10$ min $\to$ \textcolor{stateimpacted}{red impacted agents}.
-By $t=120$ most are \textcolor{statesurvival}{survival/arrival}; panicked stragglers remain.
-}}
+\includegraphics[width=0.89\linewidth]{../results/fig4_flow_PSU-UP.png}
 \end{center}
+{\centering\scriptsize \textbf{Fig.\ 4}: flow snapshots at $t=0,30,60,90,120$ min\\
+\textcolor{gray}{Hazards create impacted agents early; by $t=120$, most have reached survival/arrival states.}\par}
 \end{frame}
 
 % ============================================================
@@ -802,29 +731,26 @@ Quantitative match partial: $RC$ saturates near \textbf{6\%} in our impl.\ vs pa
 
 \begin{columns}[T,onlytextwidth]
 \column{0.52\textwidth}
-\textbf{What remains off, by 2--10\%p:}
+\textbf{Why exact matching is limited}
 \vspace{0.2em}
-\begin{itemize}\itemsep0.25em
-  \item $RI$ slightly higher (MAE $\approx$ 5\%p)
-  \item $RS$ at low $\varepsilon_p$ lower ($-5$\%p)
-  \item $RC$ saturates at $\sim$6\% (paper reaches 13\%)
-  \item $RL$ higher ($+5$--$10$\%p)
-\end{itemize}
+\begin{block}{\small Paper leaves three key inputs unpublished}
+\scriptsize
+\vspace{0.2em}
+\begin{enumerate}\itemsep0.35em
+  \item \keyterm{Shelter list} unpublished\\
+        fitted to 62\% of buildings via sensitivity analysis
+  \item \keyterm{Casualty formula} unspecified\\
+        implemented as per-step distance-weighted probability
+  \item \keyterm{Hazard random seed} unpublished\\
+        swept 200 seeds; fixed seed 1135 afterward
+\end{enumerate}
+\end{block}
 
 \vspace{0.4em}
-\textbf{Calibrated assumptions} (held fixed for all subsequent experiments) --- because the paper does not publish:
-\vspace{0.2em}
-\begin{enumerate}\itemsep0.25em
-  \item \keyterm{Shelter list} unpublished\\
-        (we fitted 62\% of buildings via sensitivity analysis)
-  \item \keyterm{Casualty formula} unspecified\\
-        (we use a per-step distance-weighted probability)
-  \item \keyterm{Hazard random seed} unpublished\\
-        (we swept 200 seeds $\to$ 1135 minimizes $RI$ error)
-  \item OSM data has evolved since the paper's download
-\end{enumerate}
-\vspace{0.2em}
-{\scriptsize\textcolor{gray}{$\Rightarrow$ Calibrated, then held fixed; not independent validation.}}
+\fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
+Calibrated once, then held fixed.\\
+Residual gaps remain: $RI$ MAE $\approx$5\%p; high-panic $RC$ remains below the paper.
+}}
 
 \column{0.44\textwidth}
 \begin{alertblock}{\small Shelter sensitivity analysis}
@@ -851,41 +777,37 @@ Applied consistently across all 5 communities.
 \end{frame}
 
 % ============================================================
-% SLIDE 17: Extension overview
+% SLIDE 17: Extension study design
 % ============================================================
-\begin{frame}[t]{Three questions we could ask because our pipeline is fast}
+\begin{frame}[t]{Extension study design beyond the paper range}
 \footnotesize
 
 \vspace{0.2em}
-Our 60$\times$ overall speedup made it feasible to probe \textbf{far beyond the paper's tested ranges}.
-Three questions emerged naturally from the Phase 2 data:
+The scalable pipeline supports three controlled extensions beyond the paper range:
 
 \vspace{0.6em}
 \begin{center}
 \begin{tikzpicture}[>=Stealth, font=\footnotesize, scale=0.95, transform shape]
 
-  % Question 1: Pmax breakpoint
+  % Question 1: Pmax threshold
   \node[panelbox, fill=lightbluefill, text width=4.2cm, minimum height=4.4cm, align=left] (q1) at (-4.8, 0)
-    {\textbf{\textcircled{\scriptsize 1} $P_{\max}$ breakpoint}\\[4pt]
-     {\scriptsize \textit{Question:} Does $RI$ stay independent of $P_{\max}$ at high populations?}\\[4pt]
-     {\scriptsize Paper tested: $P_{\max} \in [2K, 8K]$}\\
-     {\scriptsize We tested: $\mathbf{[2K, 97K]}$ ($\times$12 wider)}\\[4pt]
+    {\textbf{1. $P_{\max}$ threshold}\\[4pt]
+     {\scriptsize \textit{RQ:} Does $RI$ stay independent of $P_{\max}$ at high populations?}\\[4pt]
+     {\scriptsize Paper: 2K--8K \quad Our sweep: 2K--97K}\\[4pt]
      {\scriptsize \textcolor{highlightred}{\textbf{Finding:} holds $\leq 20K$, \\ breaks at $50K$}}};
 
   % Question 2: Hmax saturation
   \node[panelbox, fill=lightredfill, text width=4.2cm, minimum height=4.4cm, align=left] (q2) at (0, 0)
-    {\textbf{\textcircled{\scriptsize 2} $H_{\max}$ saturation}\\[4pt]
-     {\scriptsize \textit{Question:} Does $RI$ keep growing as we add more hazards?}\\[4pt]
-     {\scriptsize Paper tested: $H_{\max} \in [5, 15]$}\\
-     {\scriptsize We tested: $\mathbf{[5, 30]}$ ($\times$2 wider)}\\[4pt]
-     {\scriptsize \textcolor{highlightred}{\textbf{Finding:} saturates at \\ $\sim$86\%, not linear}}};
+    {\textbf{2. $H_{\max}$ saturation}\\[4pt]
+     {\scriptsize \textit{RQ:} Does $RI$ keep growing as we add more hazards?}\\[4pt]
+     {\scriptsize Paper: 5--15 \quad Our sweep: 5--30}\\[4pt]
+     {\scriptsize \textcolor{highlightred}{\textbf{Finding:} approaches \\ $\sim$86\% plateau}}};
 
   % Question 3: finer epsilon_p
   \node[panelbox, fill=lightgreenfill, text width=4.2cm, minimum height=4.4cm, align=left] (q3) at (4.8, 0)
-    {\textbf{\textcircled{\scriptsize 3} $\varepsilon_p$ resolution}\\[4pt]
-     {\scriptsize \textit{Question:} Are there phase transitions between paper's 5 $\varepsilon_p$ points?}\\[4pt]
-     {\scriptsize Paper tested: 5 points (20\% spacing)}\\
-     {\scriptsize We tested: $\mathbf{9}$ points (10\% spacing)}\\[4pt]
+    {\textbf{3. $\varepsilon_p$ resolution}\\[4pt]
+     {\scriptsize \textit{RQ:} Is the response smooth between paper's 5 $\varepsilon_p$ points?}\\[4pt]
+     {\scriptsize Paper: 5 points \quad Our grid: 9 points}\\[4pt]
      {\scriptsize \textcolor{highlightred}{\textbf{Finding:} smooth curves,\\ diminishing returns}}};
 
 \end{tikzpicture}
@@ -893,14 +815,14 @@ Three questions emerged naturally from the Phase 2 data:
 
 \vspace{0.4em}
 \begin{center}
-{\scriptsize Each extension answered on the next 3 slides $\to$ followed by side-by-side animations $\alpha$, $\beta$, $\gamma$.}
+{\scriptsize The next slides present one result chart per research question, followed by visual comparisons.}
 \end{center}
 \end{frame}
 
 % ============================================================
-% SLIDE 18: Extension ① Pmax breakpoint
+% SLIDE 18: Extension ① Pmax threshold
 % ============================================================
-\begin{frame}[t]{Extension \textcircled{\scriptsize 1}: $P_{\max}$ independence breaks at extreme populations}
+\begin{frame}[t]{Extension 1: $P_{\max}$ independence at high population levels}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
@@ -915,14 +837,14 @@ Three questions emerged naturally from the Phase 2 data:
 \scriptsize
 Paper: \emph{$RI \sim P_{\max}$ independent}.\\
 Confirmed: $P_{\max} \leq 20K$ ($\Delta RI < 0.2$\%p).\\[4pt]
-\textbf{Breaks at $P_{\max}$ = 50K}\\
+\textbf{Deviation appears at $P_{\max}$ = 50K}\\
 (+8.5\%p at $H_{\max}$=5).
 \end{block}
 
 \begin{alertblock}{\small Mechanism (hypothesis)}
 \scriptsize
-At high $P_{\max}$, average agents per building exceeds the \textbf{effective egress capacity} of building$\to$network connectors and nearby walk edges $\to$ outdoor queues $\to$ longer hazard exposure.\\[3pt]
-Building node capacity in our config = 100; effective bottleneck is upstream of that. Connector-capacity sensitivity is future work.
+High $P_{\max}$ appears to overload building$\to$network connectors and nearby walk edges.\\[3pt]
+Result: more outdoor queues, longer exposure, higher $RI$.
 \end{alertblock}
 
 \vspace{0.3em}
@@ -933,7 +855,7 @@ Building node capacity in our config = 100; effective bottleneck is upstream of 
 % ============================================================
 % SLIDE 19: Extension ② Hmax saturation
 % ============================================================
-\begin{frame}[t]{Extension \textcircled{\scriptsize 2}: $RI$ saturates at $\sim$86\% as $H_{\max}$ grows}
+\begin{frame}[t]{Extension 2: $RI$ approaches a plateau as $H_{\max}$ grows}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
@@ -946,14 +868,14 @@ Building node capacity in our config = 100; effective bottleneck is upstream of 
 \vspace{0.2em}
 \begin{block}{\small Finding}
 \scriptsize
-$RI$ grows \textbf{logarithmically, not linearly}, with $H_{\max}$.\\
-Saturates at $\sim$86\%: \\{\scriptsize 36\% (Hmax=5) $\to$ 86\% (Hmax=30)}.
+$RI$ rises quickly, then flattens.\\[3pt]
+\textbf{36\% at $H_{\max}$=5 $\to$ $\sim$86\% by $H_{\max}$=30.}
 \end{block}
 
 \begin{alertblock}{\small Interpretation}
 \scriptsize
-Under our hazard-generation process, $RI$ approaches an empirical plateau near 86\% by $H_{\max}$=25--30 (verified up to 30).\\[4pt]
-The remaining $\sim$14\% appears to be \emph{low-exposure} or peripheral origins under this scenario; mapping never-impacted nodes is future work.
+Under our hazard-generation process, the remaining $\sim$14\% appears to be low-exposure or peripheral origins.\\[3pt]
+This is an empirical plateau, not a universal ceiling.
 \end{alertblock}
 
 \vspace{0.3em}
@@ -964,7 +886,7 @@ The remaining $\sim$14\% appears to be \emph{low-exposure} or peripheral origins
 % ============================================================
 % SLIDE 20: Extension ③ Finer εp resolution
 % ============================================================
-\begin{frame}[t]{Extension \textcircled{\scriptsize 3}: Finer $\varepsilon_p$ grid --- smooth, monotonic}
+\begin{frame}[t]{Extension 3: Finer $\varepsilon_p$ grid --- smooth, monotonic}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
@@ -977,19 +899,14 @@ The remaining $\sim$14\% appears to be \emph{low-exposure} or peripheral origins
 \vspace{0.2em}
 \begin{block}{\small Finding}
 \scriptsize
-All three rates ($RS$, $RC$, $RL$) vs $\varepsilon_p$ are:
-\begin{itemize}\itemsep0.1em
-  \item smooth and monotonic
-  \item no abrupt transition at 10\% resolution
-  \item \textbf{diminishing marginal} panic effect
-\end{itemize}
+At 10\% resolution, $RS$, $RC$, and $RL$ change smoothly.\\[3pt]
+\textbf{No abrupt transition is visible in this calibrated scenario.}
 \end{block}
 
 \begin{alertblock}{\small Implication}
 \scriptsize
-$RS$ drops $\sim$6\%p per 10\%p $\varepsilon_p$ at low panic,\\
-$\sim$3\%p per 10\%p at high panic.\\[4pt]
-$\Rightarrow$ Within this model, marginal panic reduction has the largest effect at \emph{low-baseline} panic.
+The marginal effect is largest at low baseline panic.\\[3pt]
+Within this model, early panic reduction matters more than late-stage fine tuning.
 \end{alertblock}
 
 \vspace{0.3em}
@@ -998,47 +915,59 @@ $\Rightarrow$ Within this model, marginal panic reduction has the largest effect
 \end{frame}
 
 % ============================================================
-% SLIDE 21: Comparison α --- Pmax 2K vs 50K
+% SLIDE 21: Visual comparison --- Pmax 2K vs 50K
 % ============================================================
-\begin{frame}[t]{Comparison $\alpha$: $P_{\max}$ = 2K vs 50K}
+\begin{frame}[t]{Visual comparison 1: $P_{\max}$ = 2K vs 50K}
 \footnotesize
 
 \begin{center}
-\animategraphics[poster=first,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_pmax/cmp_}{000}{060}
+\animategraphics[poster=first,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_pmax/cmp_}{000}{060}\\[-0.2em]
+{\parbox{0.72\linewidth}{\centering\simlegend}}
 \end{center}
 
 \vspace{0.3em}
-{\scriptsize Same hazard scenario (hazard seed = 1135). Left: 2{,}000 agents fit within building capacity. Right: 50{,}000 agents overflow $\to$ outdoor queuing $\to$ hazard exposure.}
+\begin{center}
+\parbox{0.82\linewidth}{\centering\scriptsize
+Same hazard scenario; at 50K agents,\\
+connector bottlenecks create more outdoor queuing and exposure.}
+\end{center}
 \end{frame}
 
 % ============================================================
-% SLIDE 22: Comparison β --- εp 10% vs 90%
+% SLIDE 22: Visual comparison --- εp 10% vs 90%
 % ============================================================
-\begin{frame}[t]{Comparison $\beta$: $\varepsilon_p$ = 10\% vs 90\%}
+\begin{frame}[t]{Visual comparison 2: $\varepsilon_p$ = 10\% vs 90\%}
 \footnotesize
 
 \begin{center}
-\animategraphics[poster=first,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_panic/cmp_}{000}{060}
+\animategraphics[poster=first,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_panic/cmp_}{000}{060}\\[-0.2em]
+{\parbox{0.72\linewidth}{\centering\simlegend}}
 \end{center}
 
 \vspace{0.3em}
-{\scriptsize Same hazard scenario (hazard seed = 1135). Left: most agents reach shelter in order. Right: high panic $\to$ many wander randomly; higher casualty and leftover.}
+\begin{center}
+\parbox{0.82\linewidth}{\centering\scriptsize
+Same hazard scenario; higher panic sends more agents onto random routes,\\
+increasing casualty and leftover.}
+\end{center}
 \end{frame}
 
 % ============================================================
-% SLIDE 23: Comparison γ --- Hmax 5 vs 30
+% SLIDE 23: Visual comparison --- Hmax 5 vs 30
 % ============================================================
-\begin{frame}[t]{Comparison $\gamma$: $H_{\max}$ = 5 vs 30}
+\begin{frame}[t]{Visual comparison 3: $H_{\max}$ = 5 vs 30}
 \footnotesize
 
 \begin{center}
-\animategraphics[poster=first,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_hmax/cmp_}{000}{060}
+\animategraphics[poster=first,controls,loop,width=0.55\linewidth]{6}{assets/frames_cmp_hmax/cmp_}{000}{060}\\[-0.2em]
+{\parbox{0.72\linewidth}{\centering\simlegend}}
 \end{center}
 
 \vspace{0.3em}
-{\scriptsize
-Left and right panels show \textbf{different hazard scenarios by design} --- $H_{\max}$ is the hazard count itself, so the 5 hazards on the left and 30 hazards on the right are entirely different events.
-Agent seed = 42 held constant.}
+\begin{center}
+\parbox{0.82\linewidth}{\centering\scriptsize
+Left and right panels use different hazard counts by design; agent seed is held constant.}
+\end{center}
 \end{frame}
 
 % ============================================================
@@ -1048,65 +977,65 @@ Agent seed = 42 held constant.}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
-\column{0.48\textwidth}
+\column{0.31\textwidth}
 \begin{block}{\small Reproduction}
 \scriptsize
-\begin{itemize}\itemsep0.2em
-  \item Building counts: \textbf{100--102\%} across 5 communities
-  \item $RI$ trend reproduced (independent of $P_{\max}$);\\
-        quantitative MAE $\approx$ 5\%p, max $\approx$ 9\%p
-  \item $RS$/$RC$/$RL$ qualitative trends reproduced;\\
-        high-panic $RC$ undershoots paper
-  \item Core finding confirmed:\\ \keyterm{$RI \sim P_{\max}$ independence}
+\begin{itemize}\itemsep0.25em
+  \item 5 network counts matched within 0--2\%
+  \item $RI$ trend reproduced; MAE $\approx$ 5\%p
+  \item Panic trends match qualitatively; high-panic $RC$ remains low
 \end{itemize}
 \end{block}
 
-\column{0.48\textwidth}
-\begin{alertblock}{\small Novel findings (beyond paper)}
+\column{0.31\textwidth}
+\begin{block}{\small Engineering}
 \scriptsize
-\begin{itemize}\itemsep0.2em
-  \item \textcircled{\scriptsize 1} $P_{\max}$ independence \textbf{breaks at 50K} (population exceeds building capacity)
-  \item \textcircled{\scriptsize 2} $RI$ \textbf{saturates at $\sim$86\%} as $H_{\max}$ grows (topology ceiling)
-  \item \textcircled{\scriptsize 3} $\varepsilon_p$ effect is \textbf{smooth with diminishing returns}
+\begin{itemize}\itemsep0.25em
+  \item Shared shortest-path trees replace per-agent path queries
+  \item 7.5$\times$ single-process speedup
+  \item 8-worker grid made multi-seed analysis practical
+\end{itemize}
+\end{block}
+
+\column{0.31\textwidth}
+\begin{alertblock}{\small Extensions}
+\scriptsize
+\begin{itemize}\itemsep0.25em
+  \item $P_{\max}$ independence weakens at 50K
+  \item $RI$ approaches an empirical plateau near 86\%
+  \item Panic response is smooth at 10\% resolution
 \end{itemize}
 \end{alertblock}
 \end{columns}
 
-\vspace{0.4em}
+\vspace{0.7em}
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\footnotesize
-\textbf{Engineering}: 7.5$\times$ single-process speedup (shared shortest-path trees), $\times$8 parallel $\Rightarrow$ 390 runs in a few hours.\\
-Enabled multi-seed reproduction + 3 extensions; agent-side decision logic preserved verbatim.}}
+\textbf{Conclusion}: the paper's qualitative model behavior is reproduced, and the scalable pipeline enables controlled follow-up experiments without changing the behavioral state logic.}}
 \end{center}
 
-\vspace{0.5em}
+\vspace{0.7em}
 \begin{center}
 \begin{tikzpicture}[font=\footnotesize, scale=0.95, transform shape]
-  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (-6, 0)
-    {\textbf{\large 905}\\ {\tiny sim runs}};
-  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (-3.5, 0)
-    {\textbf{\large 10}\\ {\tiny seeds / config}};
-  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (-1, 0)
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=3.0cm, minimum height=1.0cm, align=center] at (-4, 0)
     {\textbf{\large 5}\\ {\tiny communities}};
-  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (1.5, 0)
+  \node[draw=highlightblue, thick, rounded corners, fill=lightbluefill, minimum width=3.0cm, minimum height=1.0cm, align=center] at (0, 0)
+    {\textbf{\large 905}\\ {\tiny total sim runs}};
+  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=3.0cm, minimum height=1.0cm, align=center] at (4, 0)
     {\textbf{\large 60$\times$}\\ {\tiny total speedup}};
-  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (4.0, 0)
-    {\textbf{\large 3}\\ {\tiny novel findings}};
-  \node[draw=highlightred, thick, rounded corners, fill=lightredfill, minimum width=2.2cm, minimum height=1.0cm, align=center] at (6.5, 0)
-    {\textbf{\large 0}\\ {\tiny new behavioral mechanisms}};
 \end{tikzpicture}
 \end{center}
 \end{frame}
 
 % ============================================================
-% SLIDE 25: Limitations --- where we focused and what we left on the table
+% SLIDE 25: Scope and limitations
 % ============================================================
-\begin{frame}[t]{Limitations: what we focused on \& what we left on the table}
+\begin{frame}[t]{Scope and limitations}
 \footnotesize
 
 \begin{columns}[T,onlytextwidth]
 \column{0.5\textwidth}
-\begin{block}{\small Where we focused}
+\begin{block}{\small Analysis scope}
 \scriptsize
 \begin{itemize}\itemsep0.25em
   \item \textbf{Faithful paper reproduction} across all 3 phases (networks, Fig.\ 5, Fig.\ 6) with multi-seed statistics
@@ -1118,7 +1047,7 @@ Enabled multi-seed reproduction + 3 extensions; agent-side decision logic preser
 \end{block}
 
 \column{0.46\textwidth}
-\begin{alertblock}{\small What we left on the table}
+\begin{alertblock}{\small Out-of-scope extensions}
 \scriptsize
 \begin{itemize}\itemsep0.25em
   \item \textbf{No agent-model changes} --- no response agents, no social-force, no MDP panic. These need new classes $\to$ out of scope.
@@ -1131,8 +1060,8 @@ Enabled multi-seed reproduction + 3 extensions; agent-side decision logic preser
 \vspace{0.8em}
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\footnotesize
-The engineering-first stance was deliberate: a fast pipeline is the prerequisite for \emph{any} of the agent-side extensions.\\
-We demonstrated the prerequisite; each extension candidate is cataloged in the backup slides.
+This project prioritizes reproducible model implementation and computational scalability.\\
+Agent-side model extensions are documented as future work in the backup slides.
 }}
 \end{center}
 \end{frame}
@@ -1183,13 +1112,13 @@ We demonstrated the prerequisite; each extension candidate is cataloged in the b
 \end{block}
 
 \column{0.46\textwidth}
-\begin{alertblock}{\small From our own gap analysis}
+\begin{alertblock}{\small Implementation-derived research gaps}
 \scriptsize
 \begin{itemize}\itemsep0.25em
   \item \textbf{Panic-dependent casualty}: current model uses distance only; extending to $p_{\text{cas}} \propto \varepsilon_p$ could close the $RC$ ceiling gap at high panic
   \item \textbf{Shelter-location sensitivity}: apply the 62\% fitting method across broader community types
-  \item \textbf{Demographic-specific shelter preference}: deferred (low expected effect on headline metrics)
-  \item \textbf{Hazard-seed sensitivity sweep}: validate plateau / breakpoint claims under different hazard scenarios
+  \item \textbf{Demographic-specific shelter preference}: deferred (low expected effect on primary metrics)
+  \item \textbf{Hazard-seed sensitivity sweep}: validate plateau / threshold claims under different hazard scenarios
 \end{itemize}
 \end{alertblock}
 \end{columns}
@@ -1198,7 +1127,7 @@ We demonstrated the prerequisite; each extension candidate is cataloged in the b
 \begin{center}
 \fcolorbox{highlightblue}{lightbluefill}{\parbox{0.92\linewidth}{\centering\scriptsize
 The agent-side directions (left) require new classes or a new movement layer.
-The data-side directions (right) plug into the existing pipeline and can be run on the same fast infrastructure.
+The data-side directions (right) plug into the existing pipeline and can be run on the same scalable infrastructure.
 }}
 \end{center}
 \end{frame}
@@ -1206,7 +1135,7 @@ The data-side directions (right) plug into the existing pipeline and can be run 
 % ============================================================
 % BACKUP 27: Multi-community Pmax extension
 % ============================================================
-\begin{frame}[t]{Backup: Does the $P_{\max}$ breakpoint generalize?}
+\begin{frame}[t]{Backup: Generalizability of the high-$P_{\max}$ threshold}
 \footnotesize
 
 \begin{center}
@@ -1226,7 +1155,7 @@ UVA-C  & 412 & 8{,}240 & to be verified & same \\
 
 \vspace{0.6em}
 {\scriptsize Multi-community Pmax sweep data is in \texttt{results/pmax\_extension/\{community\}/combined.json}.
-Breakpoint should correlate with building capacity; PSU-UP exhibits it at $\sim$2.5$\times$ capacity ($\sim$51 agents/building). Primary finding (breakpoint exists) demonstrated on PSU-UP.}
+The threshold should correlate with building capacity; PSU-UP exhibits it at $\sim$2.5$\times$ capacity ($\sim$51 agents/building). Primary finding demonstrated on PSU-UP.}
 \end{frame}
 
 % ============================================================

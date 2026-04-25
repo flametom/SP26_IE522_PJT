@@ -16,6 +16,15 @@ trash/
 # Internal docs
 HANDOFF*.md
 CROSSCHECK_FOR_GPT.md
+GPT_PRO_CROSS_CHECK_*.md
+
+# Generated one-off reports
+Extension_Candidates_Detailed.tex
+Extension_Candidates_Detailed.pdf
+
+# Local agent/tool state
+.claude/
+.codex
 
 # Generated animation frames
 presentation/assets/frames_psuup/
@@ -33,3 +42,10 @@ presentation/*.toc
 presentation/*.vrb
 presentation/final.pdf
 presentation/script.pdf
+texput.log
+
+# Ad hoc single-run outputs
+results/run_*.json
+
+# Review/submission bundles
+review_bundle*.zip

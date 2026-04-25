@@ -18,13 +18,14 @@
 \slide{1}{Title}
 \begin{itemize}
 \item Final presentation of our paper reproduction project --- Shi, Lee, Yang (IEEE CASE 2024).
-\item Plan: quick recap, reproduction scope, engineering that enabled it, reproduction results, extensions, summary.
+\item Presentation structure: recap, reproduction scope, implementation requirements, reproduction results, extensions, and summary.
 \end{itemize}
 
 \slide{2}{Recap: Simulating Emergency Evacuation}
 \begin{itemize}
-\item Brief recap from our 1st presentation. The paper asks: when a hazard hits a community, how do thousands of pedestrians actually evacuate?
-\item Each person decides independently on local information, panic causes irrational behavior, congestion is emergent --- a traditional process-flow model cannot capture this, so we need an agent-based simulation.
+\item Brief recap from our 1st presentation. The paper studies how thousands of pedestrians evacuate when a hazard affects a community.
+\item The slide only lists the three main reasons this is hard: independent decisions, local information, and emergent panic/congestion. Say the fuller version verbally: each person chooses a destination and route, those choices depend on nearby roads and hazard exposure, and congestion is not imposed globally but emerges from many individual movements.
+\item Therefore a traditional process-flow model is too aggregated. The paper uses agent-based simulation so each pedestrian has its own state, position, speed, destination, and decision logic.
 \end{itemize}
 
 \slide{3}{Recap: Three-Component Model}
@@ -35,48 +36,51 @@
 
 \slide{4}{Recap: Agent States \& Algorithms 1--2}
 \begin{itemize}
-\item Six states per human, with Algorithm 2 handling hazard exposure and Algorithm 1 handling routing.
+\item Six states per human, with Algorithm 2 handling hazard exposure and Algorithm 1 handling routing. The slide is intentionally compressed; give the operational details verbally.
+\item Algorithm 2 runs every step: if an agent is inside a hazard for the first time, it becomes impacted and reroutes to a shelter; then casualty risk and panic are checked. Casualty probability is higher near the hazard center.
+\item Algorithm 1 also runs every step: agents on edges check congestion and may queue; agents at nodes reroute, continue toward a destination, or choose a random route if panic has taken over.
 \item Two points worth emphasizing: once impacted, destination flips to the nearest shelter; panic is irreversible.
 \item We take both algorithms directly from the paper --- no changes to the decision logic.
 \end{itemize}
 
-\slide{5}{What we reproduced \& extended}
+\slide{5}{Reproduction and extension scope}
 \begin{itemize}
 \item Three reproduction targets from the paper: Phase 1 (five community networks), Phase 2a ($RI$ vs $P_{\max} \times H_{\max}$), Phase 2b ($RS/RC/RL$ vs panic).
+\item If needed, expand the abbreviations verbally: $RI$ is impacted rate, $RS$ is survival rate, $RC$ is casualty rate, and $RL$ is leftover rate, meaning agents still stuck in hazard at the end.
 \item Three extensions beyond the paper's range: wider $P_{\max}$, wider $H_{\max}$, finer panic grid.
 \item The notation box at top defines every symbol used later.
 \end{itemize}
 
-\slide{6}{What the paper tells us --- and what it leaves to us}
+\slide{6}{Implementation specifications and reproducibility gaps}
 \begin{itemize}
-\item What the paper specifies about implementation: Python 3.7, Apple M1 Pro with 16 GB RAM, and measured runtime of 2.5 hours at Pmax=2K and 22 hours at Pmax=8K per single run. Algorithms 1 and 2 are decision logic only --- the paper does not say how paths are actually computed.
-\item What the paper leaves silent: shortest-path library, per-step vs cached path policy, parallel execution, RNG design, reproducibility seeding. We had to pick a position on every one.
-\item Key takeaway (bottom box): at the paper's 2.5 h/run, our 390-run experiment would take 41 days of sequential compute. Our pipeline does it in 3.4 hours. The engineering is the prerequisite for every chart in the rest of this deck.
+\item The paper specifies the implementation environment, hardware, and measured runtime, but it does not fully specify the computational implementation. Algorithms 1 and 2 define decision logic, not the path-computation mechanism.
+\item The main unspecified details are shortest-path implementation, per-step versus cached path policy, parallel execution, RNG design, and reproducibility seeding. These choices materially affect whether a multi-seed reproduction is feasible.
+\item Key takeaway: at the paper's 2.5 h/run baseline, our 390-run core grid would require about 41 days of sequential compute. The optimized pipeline completes that grid in 3.4 hours, making the subsequent reproduction and extension analyses practical.
 \end{itemize}
 
-\slide{7}{Gap A: Computing paths, 200K+ times per run}
+\slide{7}{Computational bottleneck: repeated path computation}
 \begin{itemize}
-\item Algorithm 1 path recomputation is about 87\% of runtime: 2{,}000 agents across 121 steps is roughly 242K shortest-path queries per run. In pure Python per-agent, this is the paper's reported 2.5--22 hours.
-\item Our fix: many agents share destinations (same buildings, same shelters), so compute one shortest-path tree per unique destination and let agents do an O(1) lookup. Shown in the mechanism diagram: per-agent queries on the left, shared destination trees on the right.
-\item The bottom box is the Amdahl arithmetic: 87\% of runtime sped up by 230x gives 7.5x end-to-end. The other 13\% we left alone.
+\item Algorithm 1 path recomputation dominates runtime: 2{,}000 agents across 121 steps is roughly 242K shortest-path queries per run.
+\item Optimization: many agents share destinations, so instead of asking the graph for a new path for every agent, we group by destination, build one predecessor tree for each destination, and reconstruct each agent's path from that tree.
+\item The lower summary box reports the measured runtime change: the routing subsystem drops from 165.9 seconds to about 20.0 seconds including tree construction, and the full run drops from 168 seconds to 22.5 seconds.
 \end{itemize}
 
-\slide{8}{Gap B: Running 390 experiments, honestly}
+\slide{8}{Experimental design for scalable reproduction}
 \begin{itemize}
-\item Three more places the paper is silent, answered with one choice each. Per-step recomputation: the paper says pedestrians act on up-to-date observations, so we never cache paths. Parallel execution: the paper reports a single run, so the 8-worker multiprocessing layer is our addition --- without it, 390 runs at paper pace is 41 days. RNG streams: we split human / hazard / sim into three streams so that varying Pmax does not also vary the hazard scenario.
-\item Bottom box: each row is a question the paper does not ask out loud. Answering them is what makes reproduction-at-scale possible rather than a single run.
+\item Three implementation decisions support scalable reproduction: recompute paths every step, execute the grid with 8 workers, and vary agent seeds while keeping the hazard seed fixed.
+\item These are implementation choices, not new behavioral rules. They preserve the original model logic while making multi-seed reproduction possible.
 \end{itemize}
 
-\slide{9}{What this engineering unlocked}
+\slide{9}{Experimental scale enabled by the implementation}
 \begin{itemize}
-\item 10 seeds per config, all 5 communities validated in parallel, the 17x3 Pmax/Hmax grid for Ext 1, a 6-point Hmax sweep for Ext 2, a 9-point panic grid for Ext 3, three side-by-side comparison animations. Every one of these is finer than what the paper reported.
-\item The gray caption at the bottom mentions the raw speedup --- 7.5x single-process, 60x overall --- but only as evidence. The headline is what the 3.4 hours bought us, not the multiplier on a benchmark.
+\item The optimized implementation supports four analysis components: 10 seeds per configuration, a 390-run core grid, a 510-run Pmax sweep, and three visual comparison animations.
+\item The gray caption reports the measured speedup: 7.5x single-process and about 60x with 8 workers.
 \end{itemize}
 
-\slide{10}{PSU-UP baseline in action}
+\slide{10}{Baseline PSU-UP simulation on the reproduced network}
 \begin{itemize}
 \item Animation on the paper's baseline ($P_{\max}=2{,}000$, $H_{\max}=5$, panic 10\%).
-\item Watch: hazard appears, impacted agents reroute to shelters, some become casualties, the rest arrive. Final $RI$ is about 36\%, matching the Phase 2a chart on slide 13.
+\item In the animation, hazards appear, impacted agents reroute to shelters, some become casualties, and the remaining agents arrive. Final $RI$ is about 36\%, matching the Phase 2a chart on slide 13.
 \end{itemize}
 
 \slide{11}{Phase 1: Network validation}
@@ -87,82 +91,85 @@
 
 \slide{12}{Phase 1: PSU-UP figures}
 \begin{itemize}
-\item Left: Fig.\ 3 reproduction --- walk network with buildings in yellow, shelters in green.
-\item Right: Fig.\ 4 reproduction --- pedestrian flow snapshots at five times during a hazard scenario.
+\item Top: Fig.\ 3 reproduction --- the PSU-UP walk network, with 969 building nodes and the supplemented shelter set fixed before later experiments.
+\item Bottom: Fig.\ 4 reproduction --- pedestrian flow snapshots at five times during a hazard scenario. The key visual check is that impacted agents appear after hazards emerge, then most agents move into survival or arrival states by the end.
 \end{itemize}
 
 \slide{13}{Phase 2a: $RI$ vs $P_{\max} \times H_{\max}$}
 \begin{itemize}
-\item Fig.\ 5 reproduction. Our $RI$ sits 2--4\%p above the paper uniformly across all 9 configs.
+\item Fig.\ 5 reproduction. Our qualitative trend matches: $RI$ increases with $H_{\max}$ and is nearly independent of $P_{\max}$ in the paper range.
 \item Critical confirmation: $RI$ is independent of $P_{\max}$ from 2K to 8K (delta under 0.2\%p). This is the paper's core finding, and we reproduced it.
+\item Quantitative match is partial, not exact: mean absolute error is about 5 percentage points and the largest gap is about 9 percentage points.
 \end{itemize}
 
 \slide{14}{Phase 2b: $RS / RC / RL$ vs panic}
 \begin{itemize}
-\item Fig.\ 6 reproduction with 9 panic points (paper had 5). All three monotonic trends match, with near-exact agreement at the boundary points.
-\item Paper's main conclusion holds: panic is the dominant driver of survival and casualty outcomes.
+\item Fig.\ 6 reproduction using the paper's five panic points. All three directions match: higher panic lowers survival and raises casualty and leftover.
+\item Quantitative levels are only partially matched. The largest visible gap is high-panic casualty: our implementation levels off near 6\%, while the paper reaches about 13\%.
+\item Therefore the academically precise interpretation is qualitative reproduction with remaining model gaps, rather than exact numerical reproduction.
 \end{itemize}
 
-\slide{15}{Gaps with the paper}
+\slide{15}{Calibration choices and remaining gaps}
 \begin{itemize}
-\item Four categories of remaining gap, all traced to data the paper did not publish: shelter list, casualty formula, hazard seeds, exact graph preprocessing.
-\item For the shelter gap: we swept the shelter fraction and found 62\% of buildings best matches $RS$ at panic = 90\%. Details in the sensitivity table.
+\item The slide is intentionally simpler than the notes: the three main unpublished inputs are shelter locations, casualty formula, and hazard seed. We calibrated each once, then held it fixed for the rest of the deck.
+\item Shelter locations matter most for survival. The table shows why we use about 600 shelters: it gives 64.3\% survival at panic = 90\%, closest to the paper's 64.6\%.
+\item The remaining gaps should be stated explicitly: $RI$ is a little high overall, and high-panic casualty remains low because our casualty formula is conservative relative to the paper's implied behavior.
 \end{itemize}
 
-\slide{16}{Three questions we could ask}
+\slide{16}{Extension study design beyond the paper range}
 \begin{itemize}
-\item Three questions the paper's range didn't answer, which our faster pipeline lets us tackle.
-\item Paper tested $P_{\max}$ up to 8K, $H_{\max}$ up to 5, panic at 5 points. We push each axis further in the next three slides.
+\item The optimized pipeline supports three controlled extensions beyond the paper range.
+\item The paper tested $P_{\max}$ up to 8K, $H_{\max}$ up to 15, and panic at five points. We extend each axis in the next three slides.
 \end{itemize}
 
-\slide{17}{Extension 1: $P_{\max}$ breakpoint}
+\slide{17}{Extension 1: $P_{\max}$ threshold}
 \begin{itemize}
 \item Extended $P_{\max}$ from 2K to 97K across three $H_{\max}$ levels.
-\item Independence holds up to 20K, then breaks at 50K by +8.5\%p.
-\item Mechanism: 969 buildings at 20-person occupancy is about 20K capacity. At 50K we overflow --- agents queue outdoors and get hit by hazards.
+\item Independence holds up to 20K, and a measurable deviation appears at 50K by +8.5\%p.
+\item Mechanism hypothesis: at 50K, building-to-network connectors and nearby walk edges become bottlenecks, so more agents queue outdoors and remain exposed longer.
 \end{itemize}
 
 \slide{18}{Extension 2: $H_{\max}$ saturation}
 \begin{itemize}
 \item Extended $H_{\max}$ from 5 to 30 at paper-baseline $P_{\max}$.
-\item $RI$ saturates at about 86\% --- more hazards do not push past this ceiling.
-\item Interpretation: likely about 14\% of the network is structurally unreachable by hazards.
+\item $RI$ approaches an empirical plateau near 86\% by $H_{\max}=30$.
+\item Interpretation: under this hazard-generation process, the remaining 14\% appears to be low-exposure or peripheral origins, not a universal ceiling.
 \end{itemize}
 
 \slide{19}{Extension 3: Finer panic grid}
 \begin{itemize}
 \item 9 panic points vs the paper's 5.
-\item Curves are smooth, monotonic, with diminishing marginal effect --- no phase transitions between the paper's measured points.
-\item Policy implication: panic management has highest payoff at low baseline panic.
+\item Curves are smooth and monotonic at 10\% resolution; no abrupt transition is visible in this calibrated scenario.
+\item Model implication: marginal panic reduction has the largest effect at low baseline panic.
 \end{itemize}
 
-\slide{20}{Comparison alpha: $P_{\max}$ 2K vs 50K}
+\slide{20}{Visual comparison 1: $P_{\max}$ 2K vs 50K}
 \begin{itemize}
-\item Same hazard scenario, different $P_{\max}$. Watch for outdoor queuing in the high-$P_{\max}$ panel.
+\item Same hazard scenario, different $P_{\max}$. Emphasize outdoor queuing in the high-$P_{\max}$ panel.
 \end{itemize}
 
-\slide{21}{Comparison beta: panic 10\% vs 90\%}
+\slide{21}{Visual comparison 2: panic 10\% vs 90\%}
 \begin{itemize}
-\item Same hazard, different panic rate. High-panic agents wander randomly instead of moving toward shelters.
+\item Same hazard, different panic rate. High-panic agents select random routes more often instead of moving directly toward shelters.
 \end{itemize}
 
-\slide{22}{Comparison gamma: $H_{\max}$ 5 vs 30}
+\slide{22}{Visual comparison 3: $H_{\max}$ 5 vs 30}
 \begin{itemize}
 \item Hazard counts differ by design --- say this explicitly. Left has 5 hazards, right has 30.
-\item Visual: right panel is covered in red, agents hit repeatedly.
+\item The right panel shows substantially broader hazard coverage, so agents are exposed repeatedly.
 \end{itemize}
 
 \slide{23}{Summary}
 \begin{itemize}
-\item Reproduction successful within 2--4\%p of the paper across all three phases.
-\item Three novel findings beyond the paper: $P_{\max}$ breakpoint at 50K, $H_{\max}$ saturation near 86\%, smooth diminishing panic effect.
-\item The engineering enabled all of this without changing any paper algorithm --- the six-metric dashboard summarizes the scale.
+\item Summary structure is now three columns: reproduction, engineering, and extensions.
+\item The conclusion: the paper's qualitative behavior is reproduced, and the scalable pipeline enables controlled follow-up experiments without changing the behavioral state logic.
+\item The three-number dashboard keeps only communities, total simulation runs, and overall speedup.
 \end{itemize}
 
-\slide{24}{Limitations}
+\slide{24}{Scope and limitations}
 \begin{itemize}
-\item Where we focused: faithful paper reproduction, an engineering improvement, and three extensions.
-\item What we left on the table: no agent-model changes, no casualty-formula rewrite, no multi-community extension of Phase 2. The engineering-first stance was deliberate --- a fast pipeline is the prerequisite for any of the agent-side extensions.
+\item Analysis scope: faithful paper reproduction, an implementation improvement, and three controlled extensions.
+\item Out-of-scope extensions: agent-model changes, casualty-formula rewrite, and multi-community extension of Phase 2. These remain future-work directions because they change the model layer rather than only the experimental design.
 \end{itemize}
 
 \slide{25}{References \& acknowledgements}
@@ -176,9 +183,9 @@
 \item If asked about future work: the paper's own suggestions --- response agents, social-force, MDP panic model --- plus our own observation that a panic-dependent casualty formula could close the $RC$ ceiling gap.
 \end{itemize}
 
-\slide{27}{Backup: $P_{\max}$ breakpoint generalization}
+\slide{27}{Backup: $P_{\max}$ threshold generalization}
 \begin{itemize}
-\item If asked whether the $P_{\max}$ breakpoint is specific to PSU-UP: multi-community $P_{\max}$ data is in this table. Pattern is consistent across communities with different building counts.
+\item If asked whether the high-$P_{\max}$ threshold is specific to PSU-UP: multi-community $P_{\max}$ data is in this table. Pattern is consistent across communities with different building counts.
 \end{itemize}
 
 \slide{28}{Backup: Edge count anomaly}
