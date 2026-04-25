@@ -40,8 +40,6 @@ presentation/*.out
 presentation/*.snm
 presentation/*.toc
 presentation/*.vrb
-presentation/final.pdf
-presentation/script.pdf
 texput.log
 
 # Ad hoc single-run outputs
