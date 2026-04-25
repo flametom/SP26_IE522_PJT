@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Current status (2026-04-25):** Implemented, merged into `main`, and pushed to `origin/main`. The current deliverables are `presentation/final.tex`, `presentation/final.pdf` (29 pages, tracked), `presentation/script.tex`, and `presentation/script.pdf` (5 pages, tracked).
+
 **Goal:** Replace the 6-slide engineering section (current deck slides 6–11) of `presentation/final.tex` with a 4-slide redesign ("paper silence → our choice → measured outcome → enabled analysis"), resize the 4 animations on slides 12 and 22–24 so `\animategraphics` controls render without clipping, and resync `presentation/script.tex` speaker notes.
 
-**Architecture:** All work happens on branch `feature/final-presentation`. Each slide replacement is an `Edit` against `final.tex` anchored by the existing `% SLIDE N:` comment block header. After each slide-level edit we rebuild the PDF with `pdflatex` twice and visually inspect the affected pages with the `Read` tool. Speaker-note update is a full rewrite of `script.tex`.
+**Architecture:** The work was developed on branch `feature/final-presentation` and is now merged into `main`. Each slide replacement is an `Edit` against `final.tex` anchored by the existing `% SLIDE N:` comment block header. After each slide-level edit we rebuild the PDF with `pdflatex` twice and visually inspect the affected pages with the `Read` tool. Speaker-note update is a full rewrite of `script.tex`.
 
 **Tech Stack:** LaTeX (Beamer class, `animate` package, TikZ), `pdflatex` from TeX Live, bash. No new dependencies.
 
@@ -16,10 +18,10 @@
 
 | File | Responsibility | Change type |
 |---|---|---|
-| `presentation/final.tex` | Beamer source of the 32-page deck → will become a 30-page deck after the edit. | Modify — slides 6, 7, 8, 9 fully rewritten; `width=` inside `\animategraphics` on slides 12, 22, 23, 24 changed. |
-| `presentation/final.pdf` | Compiled deck (gitignored). | Regenerated after every slide edit via `pdflatex`. |
-| `presentation/script.tex` | Speaker notes, 32 `\slide{N}{...}` entries. | Modify — rewrite `\slide{6}` through `\slide{9}` to match new engineering titles; decrement `\slide{10}` through `\slide{32}` by 2 to re-sync. |
-| `presentation/script.pdf` | Compiled notes (gitignored). | Regenerated. |
+| `presentation/final.tex` | Beamer source of the current 29-page final deck. | Modified — slides 6, 7, 8, 9 fully rewritten; `width=` inside `\animategraphics` on slides 12, 22, 23, 24 changed. |
+| `presentation/final.pdf` | Compiled final deck, tracked in Git. | Regenerated via `pdflatex`; current artifact is 29 pages. |
+| `presentation/script.tex` | Speaker notes for 25 main slides + 4 backup slides. | Modified — engineering notes rewritten and backup numbering resynced. |
+| `presentation/script.pdf` | Compiled speaker notes, tracked in Git. | Regenerated; current artifact is 5 pages. |
 | `HANDOFF_2026-04-23.md` | Repo-root handoff doc describing deck structure. | Modify — change "32 pages" to "30 pages" and update the slide table. |
 | `/home/flametom/.claude/projects/-home-flametom-coursework-IE522-PJT/memory/session_20260423_handoff.md` | Auto-memory session note. | Modify — change page count. |
 
@@ -1293,21 +1295,21 @@ new: \slide{28}{Backup: Edge count anomaly}
 Edit 23:
 ```
 old: \slide{31}{Backup: Extension candidates considered}
-new: \slide{29}{Backup: Extension candidates considered}
+new: removed in the final cleanup pass
 ```
 
 Edit 24:
 ```
 old: \slide{32}{Backup: Static snapshots}
-new: \slide{30}{Backup: Static snapshots}
+new: \slide{29}{Backup: Static snapshots}
 ```
 
-Also update the opening structure line near the top of `script.tex` that says "Structure: 27 main slides + 5 backup" — change to "Structure: 25 main slides + 5 backup":
+Also update the opening structure line near the top of `script.tex`; final cleanup now uses "Structure: 25 main slides + 4 backup":
 
 Edit 25:
 ```
-old: \noindent\textbf{Structure:} 27 main slides + 5 backup. Framing throughout is paper vs our implementation. No internal-iteration history in what the audience hears.
-new: \noindent\textbf{Structure:} 25 main slides + 5 backup. Framing throughout is paper vs our implementation. No internal-iteration history in what the audience hears.
+old: earlier structure line with 27 main slides and 5 backup slides
+new: \noindent\textbf{Structure:} 25 main slides + 4 backup. Framing throughout is paper vs our implementation. No internal-iteration history in what the audience hears.
 ```
 
 Also remove the two references to earlier-indexed slides that point forward; check for strings like "matching the Phase 2a chart on slide 15" (now slide 13) and "details in backup slide 30" (now slide 28):

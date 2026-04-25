@@ -5,6 +5,8 @@
 **Project:** Multi-agent Evacuation Simulation (Shi et al., IEEE CASE 2024)
 **Course:** IE 522 Simulation, Penn State University, Spring 2026
 
+**Current status (2026-04-25):** Implemented and superseded by later slide-polish passes. The current committed deck is `presentation/final.pdf` (29 pages: 25 main + 4 backup) with `presentation/script.pdf` as the companion speaker notes.
+
 ---
 
 ## 0. Context
@@ -34,13 +36,15 @@
 | Animation format | Beamer `animategraphics` (same as 1차) | Already validated in 1차 presentation |
 | Speaker notes | Separate `script.tex` (1차 pattern) | Consistency with prior workflow |
 | Compressible slides | Not pre-marked | User prefers full deck first, trim during rehearsal if needed |
-| Total slide count | 26 main + 4 backup = 30 | Full deep-dive coverage |
+| Total slide count | Current artifact: 25 main + 4 backup = 29 | Final deck after later consolidation and backup trimming |
 | Bug fix history | Excluded | User requested exclusion |
 | Multi-community extension | Backup slide only | Keeps main narrative clean |
 
 ---
 
-## 2. Slide Skeleton (26 main slides)
+## 2. Original Slide Skeleton (superseded)
+
+This section records the initial 2026-04-22 design target. The implemented final deck was later consolidated to 25 main slides + 4 backup slides.
 
 All slides use Beamer aspectratio=169 with the color/font system from `main.tex`.
 "1차 reuse" = TikZ/content can be lifted. "New" = must be authored.

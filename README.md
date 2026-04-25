@@ -44,7 +44,13 @@ IE522_PJT/
 │   ├── fig5_RI_PSU-UP.png             # RI vs Pmax × Hmax
 │   ├── fig6_panic_PSU-UP.png          # RS/RC/RL vs εp
 │   └── timeseries_*.png              # Agent state timeseries
-├── presentation/              # Midterm presentation (Beamer + toy sim)
+├── presentation/              # Final presentation deck, notes, charts, and animations
+│   ├── final.tex              # Beamer source for the final deck
+│   ├── final.pdf              # Final presentation PDF (29 pages, tracked)
+│   ├── script.tex             # Speaker-note source
+│   ├── script.pdf             # Speaker-note PDF
+│   ├── charts/                # Chart and animation-generation scripts
+│   └── assets/                # Presentation figures and animation frames
 └── reference/                 # Paper, course guides
 ```
 
@@ -70,6 +76,26 @@ python run_pmax_extension.py --local --workers 8
 
 # Pmax extension — all communities
 python run_pmax_multicommunity.py --workers 8
+```
+
+## Final Presentation
+
+Current final-presentation artifacts are committed on `main`:
+
+| Artifact | Description |
+|---|---|
+| `presentation/final.pdf` | Final deck, 29 pages, with embedded animation frames |
+| `presentation/final.tex` | Beamer source for the final deck |
+| `presentation/script.pdf` | Speaker notes for the 25 main slides and 4 backup slides |
+| `presentation/script.tex` | Speaker-note source |
+
+To rebuild the PDFs:
+
+```bash
+cd presentation
+pdflatex -halt-on-error final.tex
+pdflatex -halt-on-error final.tex
+pdflatex -halt-on-error script.tex
 ```
 
 ## Key Results

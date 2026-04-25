@@ -3,7 +3,7 @@
 **Date:** 2026-04-23
 **Scope:** `presentation/final.tex` — slides 6–11 (engineering) and slides 12, 22–24 (animations).
 **Supersedes:** engineering-related portions of `2026-04-22-final-presentation-design.md`. Animation sizing is new.
-**Status:** Brainstorming complete, awaiting user review before plan-writing.
+**Status:** Implemented and merged to `main` on 2026-04-25. Current artifacts: `presentation/final.pdf` (29 pages, tracked) and `presentation/script.pdf` (5 pages, tracked).
 
 ## 1. Motivation
 
