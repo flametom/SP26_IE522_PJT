@@ -46,7 +46,7 @@ IE522_PJT/
 │   └── timeseries_*.png              # Agent state timeseries
 ├── presentation/              # Final presentation deck, notes, charts, and animations
 │   ├── final.tex              # Beamer source for the final deck
-│   ├── final.pdf              # Final presentation PDF (29 pages, tracked)
+│   ├── final.pdf              # Final presentation PDF (30 pages, tracked)
 │   ├── script.tex             # Speaker-note source
 │   ├── script.pdf             # Speaker-note PDF
 │   ├── charts/                # Chart and animation-generation scripts
@@ -84,9 +84,9 @@ Current final-presentation artifacts are committed on `main`:
 
 | Artifact | Description |
 |---|---|
-| `presentation/final.pdf` | Final deck, 29 pages, with embedded animation frames |
+| `presentation/final.pdf` | Final deck, 30 pages, with embedded animation frames |
 | `presentation/final.tex` | Beamer source for the final deck |
-| `presentation/script.pdf` | Speaker notes for the 25 main slides and 4 backup slides |
+| `presentation/script.pdf` | Speaker notes for the 26 main slides and 4 backup slides |
 | `presentation/script.tex` | Speaker-note source |
 
 To rebuild the PDFs:

@@ -13,7 +13,7 @@
 \begin{document}
 \maketitle
 
-\noindent\textbf{Structure:} 25 main slides + 4 backup. Framing throughout is paper vs our implementation. No internal-iteration history in what the audience hears.
+\noindent\textbf{Structure:} 26 main slides + 4 backup. Framing throughout is paper vs our implementation. No internal-iteration history in what the audience hears.
 
 \slide{1}{Title}
 \begin{itemize}
@@ -86,7 +86,7 @@
 \slide{11}{Phase 1: Network validation}
 \begin{itemize}
 \item Building counts match the paper's Table V within 0--2\% across all five communities.
-\item Edge counts: PSU-UP, UVA-C, VT-B line up. RA-PA and KOP-PA are anomalous --- paper's $E/N$ ratios of 6.5--6.8 are unreproducible with any OSMnx configuration we tried. Treated as a paper data anomaly; details in backup slide 28.
+\item Edge counts: PSU-UP, UVA-C, VT-B line up. RA-PA and KOP-PA are anomalous --- paper's $E/N$ ratios of 6.5--6.8 are unreproducible with any OSMnx configuration we tried. Treated as a paper data anomaly; details in backup slide 29.
 \end{itemize}
 
 \slide{12}{Phase 1: PSU-UP figures}
@@ -172,28 +172,34 @@
 \item Out-of-scope extensions: agent-model changes, casualty-formula rewrite, and multi-community extension of Phase 2. These remain future-work directions because they change the model layer rather than only the experimental design.
 \end{itemize}
 
-\slide{25}{References \& acknowledgements}
+\slide{25}{Team contributions}
+\begin{itemize}
+\item This slide satisfies the project guide requirement to delineate each member's contribution in the report.
+\item Keep the delivery brief: individual technical roles first, then shared work across environment setup, debugging, result checking, presentation preparation, README writing, final code review, and final report approval.
+\end{itemize}
+
+\slide{26}{References \& acknowledgements}
 \begin{itemize}
 \item Acknowledge the primary paper, the 2021 companion paper we used to disambiguate preprocessing, OSMnx, and SciPy.
 \item Code and data on GitHub. Thank the audience; invite questions.
 \end{itemize}
 
-\slide{26}{Backup: Future work}
+\slide{27}{Backup: Future work}
 \begin{itemize}
 \item If asked about future work: the paper's own suggestions --- response agents, social-force, MDP panic model --- plus our own observation that a panic-dependent casualty formula could close the $RC$ ceiling gap.
 \end{itemize}
 
-\slide{27}{Backup: $P_{\max}$ threshold generalization}
+\slide{28}{Backup: $P_{\max}$ threshold generalization}
 \begin{itemize}
 \item If asked whether the high-$P_{\max}$ threshold is specific to PSU-UP: multi-community $P_{\max}$ data is in this table. Pattern is consistent across communities with different building counts.
 \end{itemize}
 
-\slide{28}{Backup: Edge count anomaly}
+\slide{29}{Backup: Edge count anomaly}
 \begin{itemize}
 \item If asked about the RA-PA and KOP-PA mismatch: this backup has the diagnostic table. Paper reports $E/N$ of 6.5--6.8, which is implausibly high for pedestrian walk networks and unreproducible with any standard OSMnx configuration.
 \end{itemize}
 
-\slide{29}{Backup: Static snapshots}
+\slide{30}{Backup: Static snapshots}
 \begin{itemize}
 \item If the venue's PDF viewer does not play the embedded animations: these still frames are the fallback.
 \end{itemize}

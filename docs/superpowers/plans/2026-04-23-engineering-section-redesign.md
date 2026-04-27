@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **Current status (2026-04-25):** Implemented, merged into `main`, and pushed to `origin/main`. The current deliverables are `presentation/final.tex`, `presentation/final.pdf` (29 pages, tracked), `presentation/script.tex`, and `presentation/script.pdf` (5 pages, tracked).
+> **Current status (2026-04-26):** Implemented, merged into `main`, and pushed to `origin/main`; contribution disclosure was added afterward. The current deliverables are `presentation/final.tex`, `presentation/final.pdf` (30 pages, tracked), `presentation/script.tex`, and `presentation/script.pdf` (6 pages, tracked).
 
 **Goal:** Replace the 6-slide engineering section (current deck slides 6–11) of `presentation/final.tex` with a 4-slide redesign ("paper silence → our choice → measured outcome → enabled analysis"), resize the 4 animations on slides 12 and 22–24 so `\animategraphics` controls render without clipping, and resync `presentation/script.tex` speaker notes.
 
@@ -18,10 +18,10 @@
 
 | File | Responsibility | Change type |
 |---|---|---|
-| `presentation/final.tex` | Beamer source of the current 29-page final deck. | Modified — slides 6, 7, 8, 9 fully rewritten; `width=` inside `\animategraphics` on slides 12, 22, 23, 24 changed. |
-| `presentation/final.pdf` | Compiled final deck, tracked in Git. | Regenerated via `pdflatex`; current artifact is 29 pages. |
-| `presentation/script.tex` | Speaker notes for 25 main slides + 4 backup slides. | Modified — engineering notes rewritten and backup numbering resynced. |
-| `presentation/script.pdf` | Compiled speaker notes, tracked in Git. | Regenerated; current artifact is 5 pages. |
+| `presentation/final.tex` | Beamer source of the current 30-page final deck. | Modified — slides 6, 7, 8, 9 fully rewritten; `width=` inside `\animategraphics` on slides 12, 22, 23, 24 changed; contribution disclosure added before references. |
+| `presentation/final.pdf` | Compiled final deck, tracked in Git. | Regenerated via `pdflatex`; current artifact is 30 pages. |
+| `presentation/script.tex` | Speaker notes for 26 main slides + 4 backup slides. | Modified — engineering notes rewritten and backup numbering resynced. |
+| `presentation/script.pdf` | Compiled speaker notes, tracked in Git. | Regenerated; current artifact is 6 pages. |
 | `HANDOFF_2026-04-23.md` | Repo-root handoff doc describing deck structure. | Modify — change "32 pages" to "30 pages" and update the slide table. |
 | `/home/flametom/.claude/projects/-home-flametom-coursework-IE522-PJT/memory/session_20260423_handoff.md` | Auto-memory session note. | Modify — change page count. |
 

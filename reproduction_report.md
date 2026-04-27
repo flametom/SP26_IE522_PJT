@@ -7,6 +7,16 @@
 
 ---
 
+## Team Member Contributions
+
+Jeongwon Bae contributed to the development of the community network, human agent, and hazard agent model components, and to the analysis and visualization of results.
+
+Dalal Alboloushi contributed to algorithm integration, map data collection and preprocessing, experiment design and execution, and the literature review.
+
+Both members contributed to environment setup, debugging, result checking, preparation of the final simulation code and supporting analysis results, presentation preparation, README writing, and final code review. Both members read and approved the final report.
+
+---
+
 ## 1. Reproduction Objective
 
 This project reproduces the community evacuation simulation from the above paper. The paper proposes a multi-agent model combining:

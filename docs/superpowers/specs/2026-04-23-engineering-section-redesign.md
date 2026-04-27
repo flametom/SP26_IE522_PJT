@@ -3,7 +3,7 @@
 **Date:** 2026-04-23
 **Scope:** `presentation/final.tex` — slides 6–11 (engineering) and slides 12, 22–24 (animations).
 **Supersedes:** engineering-related portions of `2026-04-22-final-presentation-design.md`. Animation sizing is new.
-**Status:** Implemented and merged to `main` on 2026-04-25. Current artifacts: `presentation/final.pdf` (29 pages, tracked) and `presentation/script.pdf` (5 pages, tracked).
+**Status:** Implemented and merged to `main` on 2026-04-25; contribution disclosure added on 2026-04-26. Current artifacts: `presentation/final.pdf` (30 pages, tracked) and `presentation/script.pdf` (6 pages, tracked).
 
 ## 1. Motivation
 
@@ -218,7 +218,7 @@ Known Beamer / pdflatex failure modes from the existing codebase (per `HANDOFF_2
 Implementation is done when all of the following hold:
 
 1. `cd presentation && pdflatex -halt-on-error final.tex` exits 0 on two consecutive runs.
-2. `pdfinfo presentation/final.pdf | grep Pages` reports **30** (down from 32 main+backup; actually 27 main + 5 backup was the old state, so new state is 25 main + 5 backup = 30).
+2. `pdfinfo presentation/final.pdf | grep Pages` reports **30** (current state: 26 main + 4 backup).
 3. `grep -n -i -E 'A\*|A-star|SSSP|dijkstra|heuristic|euclidean|midterm|post-midterm|naïve|naive' presentation/final.tex` returns zero matches. No exceptions: the mechanism-diagram panels are labeled "Per-agent queries" / "Shared destination trees" so "naïve" does not appear anywhere in the deck.
 4. Visual inspection (via `Read` tool on `final.pdf`) of the four new engineering slides + the four animation slides (positions given as "new N (was M)"):
    - **New slide 6** (was 6): two-column paper-specifies vs paper-silent layout with the 41-days-vs-3.4-hours highlight box centered at the bottom.

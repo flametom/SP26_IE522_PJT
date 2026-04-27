@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **Current status (2026-04-25):** Implemented and superseded by later cleanup passes. The current committed artifacts are `presentation/final.pdf` (29 pages: 25 main + 4 backup), `presentation/final.tex`, `presentation/script.pdf` (5 pages), and `presentation/script.tex`.
+> **Current status (2026-04-26):** Implemented and superseded by later cleanup passes. The current committed artifacts are `presentation/final.pdf` (30 pages: 26 main + 4 backup), `presentation/final.tex`, `presentation/script.pdf` (6 pages), and `presentation/script.tex`.
 
 **Goal:** Produce the final IE 522 presentation deck (original target: 26 main + 4 backup slides with 4 animations, 3 extension charts, benchmark measurements, and speaker notes), following the science-first narrative in `docs/superpowers/specs/2026-04-22-final-presentation-design.md`.
 
@@ -16,7 +16,7 @@
 
 ### New files
 
-- `presentation/final.tex` — final deck source; current committed deck is 29 pages
+- `presentation/final.tex` — final deck source; current committed deck is 30 pages
 - `presentation/script.tex` — speaker notes (standalone article)
 - `presentation/charts/gen_benchmark_charts.py` — slides 6 + 10
 - `presentation/charts/gen_ext1_pmax_breakpoint.py` — slide 18
